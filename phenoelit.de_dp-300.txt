@@ -1,0 +1,39 @@
+[ Authors ]
+	FX		&lt;fx@phenoelit.de&gt;
+        FtR             &lt;ftr@phenoelit.de&gt;
+
+	Phenoelit Group	(http://www.phenoelit.de)
+	Advisory	http://www.phenoelit.de/stuff/dp-300.txt
+
+[ Affected Products ]
+        D-Link
+			DP-300+
+
+        D-Link Bug ID:	Not assigned
+
+[ Vendor communication ]
+        07/07/02        Initial Notification
+                        *Note-Initial notification by phenoelit
+                        includes a cc to cert@cert.org by default
+        07/19/02        Notification of intent to post public in apx.
+                        7 days.
+
+
+[ Overview ]
+        The D-Link Ethernet/Fast Ethernet Print Server DP-300+
+        provides network connectivity for printers.
+	
+[ Description ]
+        By sending an oversized POST request to an existing web page such 
+	as /Config1.htm, the device web server dies.  A process appears to be 
+	listening on the port but will no longer answer requests.  Additionally, 
+	the print server reports an uptime of less then one minute after the 
+	attack, indicating that the software dies during this time.
+
+[ Example ]
+        See above
+
+[ Solution ]
+	None known at this time. 
+
+[ end of file ]
