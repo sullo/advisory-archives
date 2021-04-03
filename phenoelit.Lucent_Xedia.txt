@@ -1,0 +1,51 @@
+Phenoelit Advisory <wir-haben-auch-mal-was-gefunden #0815 +++>
+
+[ Authors ]
+	FX		<fx@phenoelit.de>
+	kim0 		<kim0@phenoelit.de>	
+
+	Phenoelit Group	(http://www.phenoelit.de)
+	Advisory	http://www.phenoelit.de/stuff/Lucent_Xedia.txt
+
+[ Affected Products ]
+	Lucent    
+			Access Point IP Services Router
+			(Formerly known as Xedia Router)
+
+	Lucent Bug ID: 		Not assigned
+	CERT Vulnerability ID: 682275
+
+[ Vendor communication ]
+	06/28/02	Reply to inquiry regarding "who to notify"
+        06/29/02        Initial Notification, Xedia team
+                        *Note-Initital notification by phenoelit
+                        includes a cc to cert@cert.org by default
+        07/01/02        Human confirmation form Lucent of receipt
+        07/01/02        Human confirmation from CERT and correspondence
+                        from CERT
+        07/06/02        Weekly follow-up by central POC at
+                        Lucent (Right on Time)
+        07/08/02        Follow Up
+        07/19/02        Notification of intent to post publically
+                        in apx. 7 days.
+
+[ Overview ]
+	The Lucent Access Point Router is a mid-range Access Level Router
+	that supports a wide range of cool features such as CBQ (QoS stuff).
+	
+[ Description ]
+	The Lucent Access Point has a web server providing a colorful
+	interface to use for configuration.  This interface is apparently 
+	for those people who don't like the extremley powerful 
+	command-line. When sending an HTTP GET request with approximately
+	4000 characters in the URI to the server, the Access Point reboots.
+
+[ Example ]
+	linux# wget `perl -e 'print "http://router_ip/"; print "A"x4000; print "/";`
+	router# [b00m]
+
+[ Solution ]
+
+	None known at this time. 
+
+[ end of file ]
