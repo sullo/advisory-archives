@@ -1,0 +1,528 @@
+
+-----/ RFP2201 /-------------------------------/ rfp.labs / wiretrip /---- 
+
+                       MS Site Server Evilness
+    Security considerations to keep in mind when using Site Server 3.0
+
+-----------------------------------------/ shimmer / shimmer39@hotmail.com
+------------------------------------/ rain forest puppy / rfp@wiretrip.net
+
+Table of contents:
+
+-/ 1 / Standard advisory information
+-/ 2 / What this is all about
+-/ 3 / Site Server 3.0
+-/ 4 / Site Server 3.0, Commerce Edition
+-/ 5 / Site Server 3.0, Commerce Edition + updates
+-/ 6 / Conclusion
+
+--------------------------------------------------------------------------
+Disclaimer: no one is forcing you to read this; stop if you don't want to.
+--------------------------------------------------------------------------
+
+
+-/ 1 / Standard advisory information /------------------------------------
+
+Software package: 	MS Site Server (regular + Commerce Edition)
+Vendor homepage:	www.microsoft.com/siteserver/
+Version tested:		3.0
+Platforms:		Windows NT
+Vulnerability type:	Various (info exposure to file uploading)
+Prior problems:		See text
+Current version:	3.0 SP4
+
+
+NOTE:  The vendor was not given this advisory prior to release due to the
+fact that the solutions are based on known, published administrative best
+practices and year-old patches.  The recommended best practices herein 
+are generally covered in the MS IIS lockdown guide (I would supply the URL
+but I have found the Microsoft Security site too difficult to navigate as 
+of late, and was unable to find the new resting place of this document).
+
+
+
+-/ 2 / What this is all about /-------------------------------------------
+
+First off, it's been a little over a year since my last official advisory.
+I figured it's definately past time to release some new documents. So...
+here it is.
+
+I've always meant to take a peek into Site Server, to see if anything evil
+was inside.  Unfortunately, my MSDN subscription only included Site Server
+3.0, Commerce Edition.  To install that, you need to first install the
+regular Site Server 3.0, which is not included with MSDN (that I saw).  So
+I never was able to get my hands on a copy of the regular 3.0 version to
+take a peek at.  That was around a year ago, maybe more.
+
+Fast forward to last week, Shimmer, a fellow security buff, passed along
+a copy of Site Server 3.0 and mentioned that I should look at it.  Happy
+to finally get a chance, I threw it on my poor overly-abused NT4 install
+(which exists to test NT/IIS exploits mostly), and went to town.  It
+didn't take long to start coming across 'uncool' stuff.
+
+Basically what I did was install the regular Site Server 3.0 and look
+for bugs.  I then upgraded to Commerce edition and looked for additional
+bugs.  Then I updated to the latest NT & site Server service packs, and
+checked to see if they were still present.  So 3 installations, each
+having it's own section.
+
+Just to state up front, we have no idea if these bugs exist on the Win2K
+platform, or in Site Server 2000.  Perhaps a subject for a later date.
+
+And yes, Site Server 3.0 prior to Site Server SP4 (not to be confused with
+NT SP4) is known to have security bugs--so if you haven't upgraded to SP4
+yet, this article will give you several reasons to do so.
+
+
+
+-/ 3 / Site Server 3.0 /--------------------------------------------------
+
+Tested platform was Site Server 3.0 installed on NT4 SP5 machine.
+In the example URLs, 'solce.rfp.labs' is the vulnerable server.
+
+Some vulnerabilities are already known for this version of Site
+Server. In particular, MS KB 1231656 details 6 separate viewcode.asp
+pages included in the samples directory.  This is documented as
+BugtraqID 167.
+
+There are other bugs, but they apply to Site Server 3.0, Commerce
+Edition (see section 4, below).
+
+Onto the bugs....
+
+
+--/ a / LDAP_Anonymous account w/ default password
+
+The installation of Site Server 3.0 includes the creation of a 
+LDAP_Anonymous user account, which is used by the included LDAP service.
+Unfortunately the password for this account is set to 'LdapPassword_1'.
+This password is also hardcoded into two system DLLs as well:
+
+	\winnt\system32\pNmsrvs.dll
+	\winnt\system32\inetsrv\dscomobj.dll
+
+The account is added to the 'Guests' group, and is given the 'Log on
+locally' privilege.  Shimmer actually ran across this during his own 
+hack-fest.  He also noted that the system appears to meticuously clean 
+up after this particular user account...as in, erase left over profile
+files and such--basically, the system removes all traces that this user
+account was used to log in.
+
+The risks at this point are moderate: someone can use this account to
+log into the machine and otherwise access system resources (but with
+few actual privileges).  However we will build upon this.
+
+I would like to note that this is actually a known bug to Microsoft,
+and is discussed in MSKBQ248840.  It just hasn't surfaced in the
+security community.
+
+Systems that have (or had in the past) Site Server 3.0 installed, without
+having been upgraded to Site Server SP4, will have this vulnerability.
+
+Solution: upgrade to Site Server SP4.
+
+
+
+--/ b / Information leakage and more via administrative pages
+
+There are a host of administrative pages in the /SiteServer/Admin/
+virtual directory.  Normally they require a valid user login to
+access; fortunately, we just so happen to know that the LDAP_Anonymous
+account is available (and it works).  So onto the info leaks...
+
+ - http://solce.rfp.labs/SiteServer/admin/findvserver.asp
+
+This page gives a list of installed Site Server components.  Fortunately
+the LDAP_Anonymous account doesn't have privileges to enumerate the IIS
+components as well.  View the source...the info is stashed in META tags.
+
+ - http://solce.rfp.labs/SiteServer/Admin/commerce/foundation/domain.asp
+
+Displays known domains of which that server is involved.  You'll need
+IE to run the ActiveX, or view the data passed as parameters in the HTML
+source.
+
+ - http://solce.rfp.labs/SiteServer/Admin/commerce/foundation/driver.asp
+
+Displays a list of installed ODBC drivers, which then leads to:
+
+ - http://solce.rfp.labs/SiteServer/Admin/commerce/foundation/DSN.asp
+
+Displays all DSNs configured for selected ODBC driver (from driver.asp)
+
+ - http://solce/SiteServer/Admin/knowledge/dsmgr/users/GroupManager.asp
+ - http://solce/SiteServer/Admin/knowledge/dsmgr/users/UserManager.asp
+
+Create, modify, and potentially delete LDAP users and groups.  Can add 
+arbitrary users, and put them in arbitrary groups (including Admin 
+Group).  Note: this is separate from Windows NT user/groups, and is 
+limited to within the LDAP realm, and thus the online web apps.
+
+ - http://solce.rfp.labs/SiteServer/Admin/knowledge/dsmgr/default.asp
+
+From here, LDAP_Anonymous can view current search catalog configs.  Not
+much value in that tho.
+
+ - http://solce.rfp.labs/SiteServer/Admin/knowledge/persmbr/vs.asp
+ - http://solce.rfp.labs/SiteServer/Admin/knowledge/persmbr/VsTmPr.asp
+ - http://solce.rfp.labs/SiteServer/Admin/knowledge/persmbr/VsLsLpRd.asp
+ - http://solce.rfp.labs/SiteServer/Admin/knowledge/persmbr/VsPrAuoEd.asp
+
+These all expose various LDAP service and backend configuration 
+parameters.  
+
+The impact varies according to what information is leaked, but none of it
+would likely lead to a system compromise directly.
+
+Solution: deny access to the /SiteServer/Admin/ directory by auauthorized
+sources and users.
+
+
+
+--/ c / Information leakage via _mem_bin pages
+
+The Site Server installation places a few ASPs and DLLs in the _mem_bin
+directory in the \wwwroot\.  Two of the three DLLs require privileges not
+granted by LDAP_Anonymous.  The only ASP pages of interest:
+
+ - http://solce.rfp.labs/_mem_bin/auoconfig.asp
+
+Displays the default AUO (LDAP) schema, including host and port.  If you
+changed the port of the LDAP service, this would expose the new port.
+
+ - http://solce.rfp.labs/_mem_bin/remind.asp
+
+Will give the password reminder for any user requested (but username must
+be known).  The password reminders are stored in the LDAP database, and 
+only for LDAP users (this is unrelated to NT user accounts).  
+Vulnerability lies in the attacker deriving an obvious password from 
+password reminder clues (or, maybe users are silly enough to put their
+password as their password reminder).  But considering that the 
+LDAP_Anonymous user can add/modify/view user data (via the
+UserManager.asp script, above), this is not really anything special.
+
+The overall impact of both of these are minimal.
+
+Solution: you can probably live without both pages, so perhaps removing
+them would suffice.
+
+
+
+--/ d / Cross-site scripting in various files
+
+Many of the ASP pages appear vulnerable to CSS, but here are two specific
+ones (URLS are wrapped):
+
+http://solce.rfp.labs/SiteServer/Knowledge/Default.asp?ctr="><scr
+	ipt>alert("uhoh")</script>
+
+http://solce.rfp.labs/_mem_bin/formslogin.asp?"><script>alert("uh
+	oh")</script>
+
+They do require a valid login, so this greatly minimizes exploitability.
+
+
+
+--/ e / Anonymous LDAP access
+
+Site Server installs an LDAP service used to house user data for the
+local web site subscription database.  The LDAP service runs on port
+1002.  Basically, by firing up an LDAP client/browser (I used Softerra's
+LDAP Browser 2.1), it's possible to log in anonymously (essentially
+what the LDAP_Anonymous account is meant for!)
+
+While this is read-only access, the concern is that by browsing
+ou=Members (probably of the default o=Microsoft), all of the indicated
+members (cn=xxx) have a plain-text 'userPassword' attribute.  Thus, an
+anonymous LDAP browser can access the password of every user in the LDAP
+database.
+
+Solution: do not allow access to port 1002 by anyone other than the
+web server(s).  Firewall is good, yah?
+
+
+
+--/ f /  User publishing of files
+
+Back in mid-1999 Mnemonix posted an advisory that showed how Site Server
+2.0 was vulnerable to people uploading files to the /user/ virtual
+directory--which was given write access by default.  The problem was
+that an anonymous user could use a PUT request to upload a malicious
+ASP file, and then have it ran by requesting it normally.  More info
+under BID 1811.
+
+Well, in 3.0 things were improved.  The Virtual directory was moved
+to /Sites/Publishing/Users/.  A valid NT user account is required to
+upload (more on this in a bit).  While the .../Users/ directory and
+everything below is given write permissions, it is not given any type 
+of file browsing or script permissions--so even if an attacker did 
+upload a malicious ASP page, it would not be ran (in fact, it would 
+come back with a 403/Forbidden error page).
+
+So at this point anyone with a valid user account can upload non-
+executable content.  Enter the LDAP_Anonymous account once again.
+Using this account, it's possible to upload large files in an effort
+to consume disk space, leading to a potential DoS.  The virtual
+directory is mapped to the Site Server install directory, which defaults
+to C:\Microsoft Site Server\Sites\ ... so it's possible that the attack
+could fill the system drive.
+
+Solution: remove write access from specified directories.
+
+
+
+--/ g / Content publishing (cphost.dll) issues
+
+Besides using a PUT command to upload a file, a remote user can use the 
+forms provided at /SiteServer/Publishing/ to upload a file via a HTTP 
+POST to /scripts/cphost.dll, which was added on installation (there are
+other versions of cphost.dll as well; this one is coded to specifically
+jive with Site Server's way of doing things).
+
+The intended functionality of cphost.dll doesn't provide anything beyond
+what was described in section [f] (above).  It allows a user (with valid
+NT account credentials...a la LDAP_Anonymous) to upload files to the 
+/Sites/Publishing/Users/... directory.  The content deployment page also
+makes reference to uploading a file to a 'Content Deployment project 
+directory', as well as uploading a server  side component to be 
+installed.  We did not really dig into these avenues, but we assume them
+to be as equally (or more so) vulnerable as the one we are describing.
+
+The upload form takes two parameters: the my_file parameter which 
+contains the file to be uploaded, and the TargetURL parameter which
+specifies the final location of the uploaded file(s).  The TargetURL 
+must be in an IIS-configured writable directory (which is separate from
+the NTFS write ACLs on the filesystem).  Basically, this means that 
+cphost.dll will not place files in anything but /Sites/Publishing/Users/
+It does allow the user to make subdirectories, and the typical place to 
+put user 'LDAP_Anonymous' files is 
+/Sites/Publishing/Users/Solce/ldap_anonymous/  (keep in mind that Solce
+is the name of the server).  While this is the default location for user
+LDAP_Anonymous's files, they can techincally be put anywhere under
+/Sites/Publishing/Users/.  Directory browsing is not enabled, so you
+can't view files that are already uploaded (or a gain a list of 
+usernames).
+
+So anyways, all of this has a point.  There are two bugs in cphost.dll.
+First, if you give cphost.dll a TargetURL that's over around 250
+characters, it will abort mid-operation.  Specifically, cphost.dll
+temporarily writes files (as they are being uploaded) to a random
+directory in C:\temp--this location is hardcoded into the DLL.  Normally,
+once the files are uploaded (and thus written out), cphost.dll will then
+move them to the final resting place specified by TargetURL.  However,
+if the TargetURL is large enough, the move operation will fail, leaving
+the files forever in C:\temp taking up space.  So yes, another space-
+hogging denial of service attack...this time it is hardcoded to the C:\
+drive.
+
+But DoS attacks are lame (hear me kids?  LAME!)  Fortunately I did 
+mention one more bug in cphost.dll, and this one is more fun (or scary,
+pending your point of view).
+
+Like any good researcher, I played with using '..' types of tricks in
+the TargetURL, including using Unicode and other fun stuff in order
+to see if I could get cphost.dll to put files lower than the .../Users/
+directory (/Sites/Publishing/ has script execute permissions, unlike
+/Sites/Publishing/Users/*).  However no tricks yeild anything usable
+with TargetURL.  So I took the road-less-travelled...
+
+It turns out that modifying the filename disposition parameter of the
+multipart POST request is just enough to put an uploaded file one
+directory higher.  So by specifying a filename of '../test.asp', and a
+TargetURL of '/Sites/Publishing/Users/' (which is writable and thus
+valid to cphost.dll), the end result is the uploaded test.asp being
+placed at /Sites/Publishing/test.asp, WHICH HAS SCRIPTING PERMISSIONS.
+
+To exploit this you will need the capability of doing NTLM 
+authentication and providing an arbitrary multipart POST data body
+(both of which are featured in upcoming libwhisker versions ;) 
+
+An example content body (with the obvious content boundary):
+
+-----------------------------7d22201aa5019e
+Content-Disposition: form-data; name="my_file"; filename="../test.asp"
+Content-Type: text/html
+
+<html><body>
+Does it work?
+<% Response.Write("Yes!") %>
+</body></html>
+-----------------------------7d22201aa5019e
+Content-Disposition: form-data; name="TargetURL"
+
+http://solce.rfp.labs/Sites/Publishing/users/
+-----------------------------7d22201aa5019e--
+
+
+This resulted in the indicated file contents being saved to the URL
+mentioned above, which then, when requested, would print "Yes!",
+indicating it was parsed through the ASP parser.  This allows arbitrary
+ASP execution, which can then further be used to compromise the system,
+read databases, etc.
+
+Solution:  at this point in time, disable access to cphost.dll, and
+probably remove the entire publishing system in general.
+
+
+
+
+-/ 4 / Site Server 3.0, Commerce Edition /--------------------------------
+
+After I was all done poking at the regular Site Server 3.0, I decided to 
+install Site Server 3.0, Commerce Edition (which requires Site Server 3.0
+to already be installed).  Basically I wanted to see if any new bugs 
+where added, and if any of the above bugs were magically fixed.
+
+Site Server 3.0 Commerce does have a history of two bugs:
+
+ - BID 994: code wizards generate code that does not validate user data
+ - BID 256: /AdSamples/config/site.csc contains SQL user/pass info
+
+Well, in general Commerce edition does add a few new extra server-side
+components to use in scripts...nothing really public facing.  The 'Ad'
+component is the biggest one to mention, installing both the /AdSamples/
+and /AdManager/ directory.  Access to /AdManger/ requires proper NT
+account authentication, and LDAP_Anonymous does *not* work.
+
+
+
+--/ a / Probable SQL tampering in sample sites
+
+I reviewed the sample sites found in /clocktower/, /vc30/, /mspress30/,
+and /market/.  My general theory is that these were generated by the
+code wizards metioned in BID 994, as none of them validate user parameters
+before sticking them into SQL queries.  Since Site Server required MS
+SQL for a backend (and MS SQL allows the piggy-backing of SQL queries and
+other SQL injection tricks), it seems possible that someone could use the
+samples to play around in the DB--but they will be limited to whatever
+sample user context and database that was specified during installation
+(which could be the master DB under 'sa' privs, or a special garbage DB
+with a user account created just for it).  My odds are with the fact that
+the sample DSN created during install will have more permissions than
+should be warranted to a sample application.  
+
+Solution: yank all the sample sites, and remove the sample DSN(s) created.
+You don't need sample apps on production servers.  Everyone should know
+that by now.
+
+
+
+--/ b / Changes in prior bugs
+
+The only change after installing Commerce addition was that the following
+page (which displayed installed ODBC drivers) didn't function anymore:
+
+http://solce.rfp.labs/SiteServer/Admin/commerce/foundation/driver.asp
+
+That might be a glitch in my server config, but oh well.  Everything else
+was confirmed to still be present.
+
+
+
+-/ 5 / Site Server 3.0, Commerce Edition + updates /----------------------
+
+So now the fun part.  I took the vulnerable server and installed SP6,
+the IIS security rollup, and Site Server SP4.  Many of these bugs may have
+been (silently) fixed, so I figured I'd update and see what's still
+vulnerable, and what's still exploitable.
+
+
+--/ a / Bye-bye to old bugs
+
+The password on the LDAP_Anonymous account was changed.  This greatly
+affects the overall exploitability of the other bugs, since a valid NT
+account is required to access almost all of the web scripts.  According
+to MSKBQ248840, the LDAP_Anonymous password is a new random string 
+generated every time the LDAP service starts up.  Looking at the code in
+\winnt\system32\inetsrv\dscomobj.dll this is true, but it's done in
+an odd manner.  Basically a 10 character password is generated using
+the SSLGenerateRandomBits() function in schannel.dll, or using rand()
+(seeded with time()) if schannel.dll is not available.  The 10 character
+password is composed of 64 possible characters (A-Z, a-z, 0-9, _, %,
+and hex 0x16).  If the "HKLM\SYSTEM\CurrentControlSet\Services\LDAPSVC
+\Parameters\PasswordPolicy" registry key is defined, then more password
+mangling takes place; otherwise, the string 'Ab&1' is prepended to the
+10 random characters, making a final 14 character string.
+
+But now the weird part: instead of updating/replacing the old password
+with the new password, the service instead deletes the LDAP_Anonymous
+account, and recreates it with the new password.  When deleting the
+the account, the service does not remove the old account SID from the list
+of users allowed in the "Log on locally" privilege; after a few system
+reboots and service restarts, you'll have a long list of "Account Removed"
+entries.  Also since the SID of the account keeps changing, it's hard
+to maintain any local filesystem ACLs to limit local access by the
+LDAP_Anonymous account...not to mention if you audit user and group
+management functions, you'll be swamped with entries detailing the
+deletion and addition process (over 6 entries ever time the service
+starts).
+
+Of course, all of that is basically an inconvenience.  However, there is
+something interesting to note: using a null session netbios query, it's
+possible to get the 'password last changed' value of the LDAP_Anonymous
+account.  Now, systems that lack schannel.dll (do any really exist?) fall
+back to a rand() using srand(time()).  This means that on systems without
+schannel.dll, a null netbios session will indicate the approximate time 
+the password was created, which could then be brute-forced with feasible
+effort by seeding the random function with times just prior to the
+indicated password creation time, and trying the resulting password.
+
+This vulnerability is very limited tho, since it requires access to port
+139 and the absence of schannel.dll.  But it's interesting none-the-less.
+
+
+
+--/ b / Bugs that didn't leave
+
+The LDAP service still allows anonymous browsing.
+
+All of the administrative info-leaking URLs, _mem_bin scripts, and CSS
+pages still work when used with a valid NT account (we don't have the 
+password for the LDAP_Anonymous account anymore, but normal domain 
+accounts will still expose the information).
+
+The cphost.dll upload script still allows a valid NT user to upload
+files, and still is vulnerable to the evil multipart request that puts
+ASP pages into /Sites/Publishing.
+
+
+
+--/ c / Hello to new bugs
+
+Well, the new server had Site Server SP4, then NT Server SP6a, followed
+by the IIS security rollup installed (in that order).  According to
+history, the viewcode.asp bug should have been fixed.  However, I
+am still able to view the source of arbitrary ASP pages (URL wrapped):
+
+ - http://solce.rfp.labs/siteserver/publishing/viewcode.asp?
+		source=/default.asp
+
+Looking at the source for viewcode.asp (via viewcode.asp ;) it appears
+that it's possible to view the source of any page *except* pages in
+a directory named /secure/.  The script is also limited to files contained
+in IIS virtual directories...it doesn't appear that '..' tricks will work.
+But source code disclosure is still not cool....
+
+
+
+-/ 6 / Conclusion /------------------------------------------------------
+
+So there you have it--nothing earth-shattering, but enough bad stuff that
+Site Server admins should be made aware of.  If you haven't installed
+Site Server SP4 yet, you really need to.  The install order for SS3.0 SP4
+places it *before* NT SP6(a), so make sure to reapply SP6a afterwards
+(and then the IIS security rollup!).
+
+It only takes one known NT account login to exploit these bugs over port
+80, so this is still a problem in internal/intranet settings.  The known
+password on the LDAP_Anonymous account just made it easy for a random
+attacker who didn't have prior knowledge of a NT user account to still
+exploit the problems.
+
+
+
+-/ acks /----------------------------------------------------------------
+
+         Special thanks to shimmer for working with me on this
+
+-----/ RFP2201 /-----------/ rfp.labs / wiretrip / rfp@wiretrip.net /---- 

@@ -1,0 +1,480 @@
+
+--- Advisory RFP9907 ----------------------------- rfp.labs -----------
+
+         You, your servers, RDS, and thousands of script kiddies
+                  ..how to keep your website intact..
+                    (Defending against RDS attacks)
+
+------------------------------ rain forest puppy / rfp@wiretrip.net ---
+
+Table of contents:
+        - 1. Problem
+        - 2. Solutions
+        - 3. Situations
+	- 4. Detecting msadc.pl
+	- 5. Conclusion
+	- 6. Resources
+
+-----------------------------------------------------------------------
+
+Don't have time to read this?  Then all you need to do is delete the
+following file:
+
+	?:\Program Files\Common Files\System\Msadc\msadcs.dll
+
+Quick and dirty RDS disablement.  (If you need RDS, you better read on)
+
+-----------------------------------------------------------------------
+
+----[ 1. Problem
+
+	.gov, .mil, and even microsoft.com haven fallen lately to the
+hands of website defacers.  Turns out, it's all been because of RDS.  Now,
+sure, IIS 4.0 is pretty much exploitable right out of the box, but
+Microsoft has released not one, not two, but *three* different patches,
+plus re-released the same advisory numerous times.  And it's still a
+problem.
+
+	So we need education.  There's a lot of speculation floating
+around out there as to what and how you should fix yourself.  Since I
+wrote the exploit for RDS, and have researched it quite a bit, I'd like to
+share my findings, in an effort to put this issue to rest.
+
+	The problem is basically Jet 3.5 allows calls to VBA's shell()
+function, which lets you run shell commands (this was documented in
+RFP9901: NT ODBC remote vulnerabilities, available at:
+
+	http://www.wiretrip.net/rfp/p/doc.asp?id=3&iface=2
+
+). Now, IIS 4.0, by default, installs MDAC 1.5.  This includes RDS, which
+allows for remote access to ODBC components over the web, through one
+particular .DLL located at /msadc/msadcs.dll (this is documented in
+RFP9902: RDS/IIS vulnerability and exploit, available at:
+
+	http://www.wiretrip.net/rfp/p/doc.asp?id=1&iface=2
+
+).  So you see it's a two-part problem.  There is also an additional third
+element, where sample pages installed by various RDS SDK packages include
+a sample component named VbBusObj, which allows you to bypass some of
+Microsoft's recommended fixes (this is also documented in RFP9902).
+
+	We shall touch on all of these elements.
+	
+
+----[ 2. Solutions
+
+	The problem is that there's too many solutions, and there's many
+different combinations of usages.  I'll try to detail as many as possible.
+Also, for simplicity I've mirrored all important binaries (i386 only) on
+my website, just in case you can't get to www.microsoft.com, etc.
+
+
+-Solution #1: move cmd.exe (ULG recommended fix)
+ http://www.aviary-mag.com/News/Powerful_Exploit/ULG_Fix/ulg_fix.html
+
+I commend ULG for helping out, however this solution has a problem.  True
+that mdac.pl is hardcoded to use cmd.exe (or command.com for that matter).
+However, I want it known that 
+
+              CMD.EXE IS NOT REQUIRED FOR THE EXPLOIT TO WORK
+
+I used it for shear compatibility.  If you don't believe me, try it
+yourself.  Edit mdac.pl to not submit the 'cmd /c' string.  You can still
+supply any executable name (for example, 'rdisk').  Just remember, if you
+don't use cmd.exe, then you can't use commands like 'copy', and features
+such as file redirection ( ' > file.out').  These are only provided by
+using cmd.exe.
+
+Also note that moving cmd.exe/command.com is merely security through
+obscurity.  If the hacker finds where you put it, they can still use it.
+And adjusting the permissions on it to disallow System access may break
+applications.  I would use this solution with extreme caution (considering
+there are other patches, I would use those instead).
+
+
+-Solution #2: upgrade from MDAC 1.5 to 2.0
+
+MDAC 2.0 moves from Jet 3.5 to Jet 3.52.  This is still vulnerable to the
+VBA shell() attack (which is essential to the exploit), and does not
+disable RDS by default.  In fact, I believe it will reinstall RDS if you
+removed it.  Some notable things:
+
+* default Jet engine becomes 3.52 (still vulnerable)
+* allows custom handler support (to stop anonymous RDS usage)
+* creates Microsoft.Jet.OLEDB.3.51* providers
+
+Now, this solution, in it's default form, is not good.  You minimally need
+to enable the custom handler support.  This is simply a registry key,
+found at:
+
+	HKEY_LOCAL_MACHINE\Software\Microsoft\DataFactory\HandlerInfo\
+
+Keyname: HandlerRequired 
+Value:   DWORD:1 (safe) or 0 (unsafe)
+
+It is recommended you change this to 1.  This is also what is accomplished
+by using the 'handsafe.exe/.reg' fix provided by Microsoft.  You can get
+this file from my website at:
+	
+	http://www.wiretrip.net/rfp/bins/msadc/handsafe.exe
+
+When ran, this file will produce another file named handsafe.rem.  Rename
+this to handsafe.reg, and then double-click to import it into the registry
+(which will change the above mentioned key to a value of 1).
+
+Now, while protected via remote RDS attack, you're still vulnerable to all
+other forms of ODBC attack, which include trojan Excel, Word, and Access
+files, other rogue applications, etc.  This should be considered
+insufficient.
+
+Creation of the Microsoft.Jet.OLEDB.3.51* providers is important, and
+I'll get back to this.
+
+
+
+-Solution #3: upgrade from MDAC 1.5 to 2.1 (any level)
+
+MDAC 2.1 moves from Jet 3.5 to Jet 4.0 engine, which is not exploitable.
+However, there are compatibility issues, due to the differences between
+3.5 and 4.0.  Many people have avoided upgrading because of these
+incompatibilites.  Not to mention some stability issues with the earlier
+2.1 line as well.  Some notables:
+
+* default Jet engine becomes 4.0 (not vulnerable)
+* allows custom handler support (to stop anonymous RDS usage)
+
+However, custom handlers are not turned on by default.  You need to set
+the above mentioned registry key (HandlerRequired) to a value of 1, either
+by using regedit or the handsafe.exe/.reg fix.
+
+
+
+-Solution #4: upgrade from MDAC 1.5 to 2.0 to 2.1
+
+Now, if you were a good little admin, you should have kept up to date on
+your installs, upgrading as you went along.  If you did, you will have
+succumbed to the full upgrade route.  The same problems exist as do
+upgrading straight to 2.1 (as mentioned above)--you still need to enable
+the 'HandlerRequired' registry key.  Also remember that 2.1 used Jet 4.0
+(not vulnerable) as the default engine.  However, since you breezed
+through the 2.0 install, you have the Microsoft.Jet.OLEDB.3.51 providers.
+This means applications (including RDS) have a hook to call the old
+(exploitable) Jet 3.51 engine!
+
+You should remove these old hooks/providers.  One method is to remove the
+following registry entries:
+
+	HKEY_CLASSES_ROOT\Microsoft.Jet.OLEDB.3.51
+	HKEY_CLASSES_ROOT\Microsoft.Jet.OLEDB.3.51Errors
+	
+However, you're still faced with compatibility issues of using the 4.0
+engine.  So this isn't the greatest solution.
+
+
+-Solution #5: install JetCopkg.exe (MS99-030)
+
+JetCopkg.exe is a modified Jet 3.5 engine that has safety features enabled
+in it to prevent exploitation, referred to as 'sandbox' mode.  This safety
+feature is controlled by the following registry key:
+
+	HKEY_LOCAL_MACHINE\Software\Microsoft\Jet\3.5\engines\SandboxMode 
+
+With the following values:
+0	disabled
+1	enable for Access, disable for everything else
+2	disable for Access, enable for everything else (default)
+3	enable for everything
+
+(Note 1: 'xxx for Access' means for use with Microsoft Access program)
+
+(Note 2: this is all explained in:
+http://support.microsoft.com/support/kb/articles/q239/1/04.asp)
+
+(Note 3: the default permissions on this key are insecure!  You should
+change 'Authenticated Users' to 'Read Only' for this key.  For many
+examples how the weakness of this key can cause problems, see a great
+email by Eric Shultze, posted on my website at:
+
+	http://www.wiretrip.net/rfp/p/doc.asp?id=11&iface=2
+)
+
+A value of 2 or 3 will keep the exploits out.  So, IMHO
+
+		THIS IS THE PROPER, RECOMMENDED SOLUTION
+
+Since it's still the same Jet 3.5 engine, you should have no compatibility
+problems.  However, this does not close RDS.  While you won't be
+exploited, it means an attacker can still have remote anonymous access to
+your datasources.  Which means he can mess with your data, which still
+isn't good.  So you need to do something about RDS.  I suggest either
+disabling RDS (see below), or upgrading to MDAC 2.0 (however, upgrade to
+MDAC 2.0 first, then JetCopkg).  By upgrading to MDAC 2.0, you'll gain
+handler control, where you can deny anonymous access.
+
+
+
+-Solution #6: remove/disable RDS support
+
+This is your best bet, when used in combination with JetCopkg (mentioned
+above).  If you can't install system-modifying packages (due to Y2K
+lockdown, etc), you can at least cut off remote exploitation potential by
+disabling RDS.  You can do this the very crude and dirty way by deleting:
+
+	?:\Program Files\Common Files\System\Msadc\msadcs.dll
+
+This is the .DLL that provides the RDS interface.  However, it is much
+more recommended that you take a few extra moments and clear it up right.
+This includes:
+
+* Remove the /msadc virtual directory mapping from IIS.  To do this, open
+	up the Microsoft Management Console/Internet Service Manager.
+	Then:
+		* Go to 'Internet Information Server'
+		* Select the proper system
+		* Select 'Default Web Site'
+		* Select 'msadc'		
+		* Either hit the 'Del' key, or click the delete icon
+		* Are you sure?  Yes.
+
+* Remove the following registry key:
+
+	HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\W3SVC
+		\Parameters\ADCLaunch
+
+	(Note: line is wrapped for clarity)
+
+* Delete all files and subdirectories in:
+
+	?:\Program Files\Common Files\System\Msadc
+
+
+----[ 3. Situations
+
+
+-Situation #1: I need RDS support!
+
+Ugh, sorry to hear that.  But ok, this is doable.  You need to at least
+upgrade to MDAC 2.0.  If you have backwards-compatibility issues, then
+MDAC 2.0 with JetCopkg should do the job, otherwise shoot for MDAC 2.1.
+
+Make sure you enable the 'HandlerRequired' registry key (explained
+above).  Also make sure you remove the RDS samples, if available (see
+below).  Microsoft also recommends disabling Anonymous Access for the
+/msadc directory for the default web site under the MMC.  Lastly, you need
+to implement a custom handler.  Information on doing such is available at:
+
+	http://www.microsoft.com/Data/ado/rds/custhand.htm
+
+
+
+-Situation #2: I'm all locked down, except for those sample scripts...
+
+                             VERY IMPORTANT
+
+Using custom handlers is the only way to stop anonymous access to RDS
+without disabling RDS entirely.  However, if the RDS samples are installed
+(found at:
+
+	?:\Program Files\Common Files\System\Msadc\Samples
+
+) then an object included with the sample files (VbBusObj) can be used to
+bypass the custom handlers!  In fact, there is no reason at all this
+should be on a production server, and should be removed.  It's a two-step
+process:
+
+* Delete the following subdirectory (EVERYTHING in it):
+
+	?:\Progam Files\Comman Files\System\Msadc\Samples
+
+* Remove the following registry key:
+
+	HKEY_LOCAL_MACHINE\System\CurrentControlSet\Services\W3SVC
+		\Parameters\ADCLaunch\VbBusObj.VbBusObjCls
+
+That will remove the VbBusObj object, and prevent people from bypassing
+your custom handlers.
+
+
+
+----[ 4. Detecting msadc.pl
+
+	Detecting activity by msadc.pl version 1 and 2 isn't all that
+hard.  However, I'm assuming the exploit as it exists now--there are
+modifications possible that will make detection harder.  I'm only going to
+focus on the exploit as I wrote it.
+
+	First off, the script will do a GET request to /msadc/msadcs.dll
+on the target webserver.  If it exists, it will proceed; otherwise, it
+spits out an error message and exits.  This initial GET request should be
+logged in your webserver access logs, per the usual.  Note that 'skilled
+users' may change this to a HEAD or POST request, and may use some
+obfuscation techniques on the URL (like hex-encoding).  But it will still
+be logged.  The key is noticing msadcs.dll with no paramters (explained in
+a second)...this means someone is looking, but not using (yet).  As far as
+RDS is concerned, no one should ever be just 'looking'.  Valid users will
+use it straight out.  So calling msadcs.dll with no parameters should be
+flagged as suspicious.
+
+	If msadcs.dll exists (determined by returning a particular
+response), then it asks the user what command to run.  By default,
+msadc.pl will prepend 'cmd /c' or 'command /c', for compatibility.  This
+means it is dependant on cmd.exe or command.com.  However, again, 'skilled
+users' can modify the script to not require either.
+
+	Next the script actually starts making RDS queries.  It does so
+using POST requests to one of the following URLs:
+
+  Normal query:
+	/msadc/msadcs.dll/ActiveDataFactory.Query    
+
+  VbBusObj to bypass custom handlers:
+	/msadc/msadcs.dll/VbBusObj.VbBusObjCls.GetRecordset
+
+  Query VbBusObj for NetBIOS name:
+	/msadc/msadcs.dll/VbBusObj.VbBusObjCls.GetMachineName
+
+Now, if you are using RDS for legitimate purposes, then the
+ActiveDataFactory.Query URL is normal.  However, no one should be using
+VbBusObj, so the other two URLs should be instantly flagged as an attack.
+Remember that grep'ing your logs for 'VbBusObj' isn't going to do
+it--'skilled users' can hex-encode the URL to read something like:
+
+	/%6Dsadc/%6Dsadcs.dll/V%62BusO%62j.V%62BusO%62jCls.GetRecordset
+
+	(this is just one example)
+
+Notice how the string is now broken up.  Therefore purely relying on a
+'grep' to find problems may not be enough.
+
+At this point, I want to also point out two other tidbits:
+
+* the default msadc.pl script uses 'ACTIVEDATA' as the User-Agent.  This
+can serve as a flag--however, the normal RDS control also uses this tag as
+the User-Agent, therefore it may not be possible to distinguish from
+normal traffic.
+
+* the default msadc.pl script uses '!ADM!ROX!YOUR!WORLD!' as the MIME
+separator string.  While this isn't logged anywhere, some IDSes
+(like Dragon; www.securitywizards.com) use this to detect attacks on the
+wire.
+
+
+	By default, the script tries to use local .MDB files found on the
+server.  If one is found, it will create a table named 'AZZ' within the
+.MDB.  It does not delete the table afterward, so you can check all .MDB
+files for tables named 'AZZ'.  However, version 2 of msadc.pl allows for a
+different query type that may not create the 'AZZ' table, and may not even
+use local .MDBs (UNC support).
+
+
+----[ 5. Conclusion
+
+	Ok, yet another night where I go without sleep to type up an
+advisory.  I really need to stop this.  The things I do for you people. ;)
+
+The best indication that you've been attacked by RDS is that your website
+reads something along the lines seen on my homepage, at:
+
+	http://www.wiretrip.net/rfp/
+
+It's not that hard.  Minimally, delete a file, and you're pretty safe.
+Then you can rest assured you won't be the next defaced website on
+Attrition.
+
+Go forth and patch,
+
+.rain.forest.puppy.
+
+
+----[ 6. Resources
+
+
+- Office 97/Jet 3.5 update binary (i386)
+  http://www.wiretrip.net/rfp/bins/msadc/jetcopkg.exe
+  http://officeupdate.microsoft.com/isapi/gooffupd.asp
+	?TARGET=/downloaditems/JetCopkg.exe
+
+
+- Microsoft Universal Data Access homepage
+  http://www.microsoft.com/data/
+
+
+- MDAC 2.1.2.4202.3 (GA) (aka MDAC 2.1 sp2) update (i386)
+  http://www.wiretrip.net/rfp/bins/msadc/mdac_typ.exe
+  http://www.microsoft.com/data/download_21242023.htm
+
+
+- MDAC 2.1.1.3711.11 (GA) (aka MDAC 2.1 sp1) hotfix
+  http://www.microsoft.com/data/download/jetODBC.exe
+
+
+- MDAC 2.1 release manifest
+  http://www.microsoft.com/data/MDAC21info/MDAC21sp2manifest.htm
+
+
+- MDAC 2.1 installation FAQ
+  http://www.microsoft.com/data/MDAC21info/MDACinstQ.htm
+
+
+- Security Implications of RDS 1.5, IIS 3.0 or 4.0, and ODBC
+  http://support.microsoft.com/support/kb/articles/q184/3/75.asp
+
+
+- Unauthorized ODBC Data Access with IIS and RDS (MS99-004)
+  http://www.microsoft.com/security/bulletins/ms98-004.asp
+
+
+- Re-release of MS99-004 (MS99-025)
+  http://www.microsoft.com/security/bulletins/ms99-025.asp
+
+
+- MS99-025 FAQ (best explanation of problem by Microsoft)
+  http://www.microsoft.com/security/bulletins/MS99-025faq.asp
+
+
+- MS99-30: Patch available for Office ODBC Vulnerabilities
+  http://www.microsoft.com/security/bulletins/ms99-030.asp
+
+
+- Jet Expression Can Execute Unsafe VBA Functions
+  http://support.microsoft.com/support/kb/articles/q239/1/04.asp
+
+
+- Implementing Custom Handlers in RDS 2.0
+  http://www.microsoft.com/Data/ado/rds/custhand.htm
+
+
+- Handsafe registry patch (enables handlers)
+  http://www.wiretrip.net/rfp/bins/msadc/handsafe.exe
+  http://www.microsoft.com/security/bulletins/handsafe.exe
+
+
+- RFP9901: NT ODBC remote compromise
+  http://www.wiretrip.net/rfp/p/doc.asp?id=3&iface=2
+
+
+- RFP9902: RDS/IIS 4.0 vulnerability and exploit
+  http://www.wiretrip.net/rfp/p/doc.asp?id=1&iface=2
+
+
+- RDS exploit (msadc.pl v1 and v2)
+  http://www.wiretrip.net/rfp/p/doc.asp?id=16&iface=2
+
+
+- ULG recommended fix on OSALL
+  http://www.aviary-mag.com/News/Powerful_Exploit/ULG_Fix/ulg_fix.html
+
+
+- CERT blurb
+  http://www.cert.org/current/current_activity.html#0
+
+
+- Attrition mirror of defaced websites (patch or you'll be on it!)
+  http://www.attrition.org/mirror/attrition/
+
+
+--- rain forest puppy / rfp@wiretrip.net ----------- ADM / wiretrip ---
+
+       Patch your system before flipper and fuqnut get to you...
+
+--- Advisory RFP9907 ----------------------------- rfp.labs -----------

@@ -1,0 +1,156 @@
+
+--- Advisory RFP9905 ------------------------------- rfp.labs ----------- 
+
+                  Remote root compromise via Zeus webserver 
+
+                         (Zeus-search vulnerability) 
+
+--------------------------------- rain forest puppy / rfp@wiretrip.net -- 
+
+Table of contents: 
+        - 1. Scope of problem 
+        - 2. Solution 
+        - 3. Miscellaneous Updates 
+
+------------------------------------------------------------------------- 
+
+----[ 1. Scope of problem 
+
+        Zeus is a high-performance webserver available from Zeus 
+Technologies (www.zeus.co.uk). There's a myriad of problems, that when 
+combined together, could yield a remote root compromise. Let's review the 
+progression: 
+
+-[ Bad search engine CGI 
+
+        This is really the core of the problem. Zeus has the option to 
+setup a search engine for your virtual website(s). This feature is 
+accessible via www.zeus.server/search (not /search/, big difference). If 
+the engine is available (it's an optional feature), it can be used to 
+request any file that's accessible by the web server uid (which is *asked 
+for* on install...unwise administrators may pick 'root', which is a bad 
+choice. We shall assume they pick the typical 'nobody'). The mechanism 
+is in the search form: 
+
+        <form action="/search" method=POST> 
+        <input type=hidden name=indexfile 
+        value="/usr/local/zeus/html/search.index"> 
+        <input type=hidden name=template 
+        value="/usr/local/zeus/web/etc/search_output.html"> 
+        Query: <input type=text name=expr value=""> 
+        <input type=submit value=Search> 
+
+Notice the values for indexfile and template. Hard server paths is 
+usually a good give-away. ;) 
+
+Now if we recreate our own form, we can change the values of indexfile and 
+template to suit our liking. Modifying indexfile will get us know where, 
+as it will be virtually impossible to find a file (worth reading) that 
+Zeus will read as a search index (since it's not in the proper internal 
+format). However, the template is more interesting. This is the file 
+that is opened and given to us, simply by replacing a few variables to 
+insert the search output. Well, who needs search output. If we change 
+template to be /etc/passed, you'll get /etc/passwd as your search result. 
+Simple enough. Let's dig deeper... 
+
+-[ Administrative interface password 
+
+        Zeus comes with a web UI for administration. This server is 
+typically plopped on port 9090, and is installed as *ROOT*. This is 
+important, since it needs to change the configuration files around. There 
+is no option to not run it as root. Well, technically, you can, but it 
+won't startup, due to insufficient permissions to open and modify various 
+configuration files. I suppose you can really tweak it to run as a 
+non-root uid, but it's a load of thought to convert everything over by 
+hand. 
+
+Anyways, so the UI runs as root...it would be nice to be able to play 
+around with root permissions, eh? The only thing stopping us is a http 
+authentication login. And since we can read any file on the server, how 
+about reading the file with the administrative password? The 
+configuration file for the administrative website is (by default) 
+/usr/local/zeus/admin/website. In this file you'll see a line similiar 
+to: 
+
+        modules!access!users!admin yoEPUmukiYLrPvz4jqBeJQ== 
+
+This is the username/password combo. The default is 'admin' for a 
+user...but unfortunately the password is queried on install. The format 
+is pretty simple -- base 64 uuencoded MD5 hash. Let's verify. 
+
+My password is 'admrox'. First I make a small file with the following 
+contents: 
+
+        begin-base64 644 test.out 
+        yoEPUmukiYLrPvz4jqBeJQ== 
+        ==== 
+
+Notice it's just the password from the Zeus configuration file. I now run 
+this through uudecode and hexdump: 
+
+        [[root@wicca /tmp]# cat password.txt | uudecode -o - | hexdump 
+        0000000 81ca 520f a46b 8289 3eeb f8fc a08e 255e 
+
+Now, I can compare with the known MD5 hash of my password: 
+
+        [[root@wicca /tmp]# md5sum --string="admrox" 
+        ca810f526ba48982eb3efcf88ea05e25 "admrox" 
+
+Looking at them side by side: 
+
+        81ca 520f a46b 8289 3eeb f8fc a08e 255e 
+        ca81 0f52 6ba4 8982 eb3e fcf8 8ea0 5e25 
+
+A little byte inversion, and we have a match. Based on this you can 
+modify your brute force password cracker of choice to run through the 
+available choices (I prefer John the Ripper for this particular operation. 
+Available from www.openwall.com/john/). I will leave brute force cracking 
+the password up to you. But it is feasible to find the password. Now 
+that we have it... 
+
+-[ Using the web administration UI 
+
+        This is just more of an afterthought. It's possible to do many 
+nasty things, including making a virtual website who's document root is /, 
+enabling file uploads (via http PUT method), etc. If you enable file 
+uploads, you can upload binaries or Zeus scripts into the web 
+administration UI directory (default is /usr/local/zeus/admin/docroot) and 
+then call them through the UI--which will then be ran as root. I leave 
+the possible forms of attack to your imagination. 
+
+----[ 2. Solution 
+
+        Well, it's two-fold: for now, you should immediately disable the 
+search engine on any virtual sites you may have. This will stop the 
+attack. It is also wise to restrict access to the web administration UI 
+to a select few hosts. The ability to do this is provided in the web UI. 
+
+I would like to mention that Zeus really is an amazing little server...and 
+the UI is really nicely done. It supports a lot of stuff, and has some 
+interesting functionality. I recommend giving it a whirl. Runs on the 
+majority of Unix platforms. Unfortunately the price is a bit steep 
+($1699). Luckily they have a 30-day eval. ;) 
+
+----[ 3. Miscellaneous Updates 
+
+        A few notes while I have the chance to say them: 
+
+Whisker 1.1.1 has been released. It fixes a lot of various bugs on both 
+unix and windows platforms. I suggest you download the latest version 
+from www.wiretrip.net/rfp/. It's important that windows users read the 
+included install.txt file. 
+
+I've also received some wonderful feedback and scan scripts. I will be 
+compiling and releasing them next weekend, with the last Octoberfest 
+release. Actually, next weekend will definatley be the grand finale. ;) 
+I'm shooting for the launch of my website, new scan scripts, another 
+'release', and maybe some extra whitepapers and whatnot scattered into the 
+mix. All in time for the Samhain New Year. :) 
+
+Many thanks to wabe for giving me the idea to check out Zeus. :) 
+
+--- rain forest puppy / rfp@wiretrip.net ------------- ADM / wiretrip --- 
+
+         I'm just doing this until a good fast-food job opens up 
+
+--- Advisory RFP9905 ------------------------------ rfp.labs ------------ 
