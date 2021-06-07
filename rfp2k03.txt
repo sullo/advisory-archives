@@ -1,5 +1,3 @@
-
-
 ---------------- RFP2K03 -------------------------- rfp.labs -------------
 
            Contemplations on dvwssr.dll and how it affects life
@@ -973,5 +971,3 @@ sub sendraw {
                  "Bad puppy!  No bisquit!" - Carole Fennelly
 
 ---------- RFP2K03 ------------------------------------ rfp.labs ---------
-
-

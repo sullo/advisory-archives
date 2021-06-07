@@ -1,4 +1,3 @@
-
 -----/ RFP2101 /-------------------------------/ rfp.labs / wiretrip/---- 
 
                     RFPlutonium to fuel your PHP-Nuke
@@ -83,7 +82,7 @@ comments.php  images/      pollcomments.php  top.php
 admin.php:      $result = mysql_query("SELECT qid FROM queue");
 .... 254 more lines of SQL queries that I don't want to print here ....
 
-Now, lets take a look at those that contain variables, since it�s possible
+Now, lets take a look at those that contain variables, since it’s possible
 user input is contained in those variables.  For example, a few select
 lines from that output:
 
@@ -121,7 +120,7 @@ So we see that $q used the variables $sid and $pid, and perhaps $thold, if
 it's defined.
 
 So what do we do now?  Well, let's take a look at what is actually in some
-of those variables.  We�ll start with the above query listed for
+of those variables.  We’ll start with the above query listed for
 article.php.  Here is the actual code, with comments removed:
 
 	<?PHP
@@ -216,7 +215,7 @@ there's an entry for:
 
 This proves that it's working. We can now submit values into the SQL
 query.  We now need to see if we can *tamper* with the query.  We will
-attempt to �rewrite� the query so that it will include other SQL code.
+attempt to ‘rewrite’ the query so that it will include other SQL code.
 Doing this involves some trickery: the addition of some extra single
 quotes.  What we'll do is change $thold to read:
 
@@ -552,12 +551,12 @@ query that is querying the author table specifically.  So, let's see:
 	by counter DESC limit 0,$top");
 
 Hmm, so only 8 hits.  The second query in mainfile.php doesn't actually
-query the �author� table, and the stats.php doesn't include any variables,
+query the “author” table, and the stats.php doesn't include any variables,
 so those can be scratched.  Top.php is severely limited--if MySQL allowed
 extra queries to be appended (like I've discussed in the past and above),
 then it would have possibility; but in our case, it doesn't, so we don't
 need to spend time on it.  Mainfile.php doesn't retrieve any interesting
-information from the �author� table, so we can't really abuse it.  So that
+information from the “author” table, so we can't really abuse it.  So that
 leaves us with admin.php and auth.inc.php.
 
 Admin.php is the page where administrators log in and perform
@@ -740,14 +739,14 @@ with a file parameter set to something like '../../../../etc/hosts' allows
 us to view the contents of the system's hosts file.  The other fopen's can
 be abused in the same manner.
 
-So let�s move on to mainfile.php.  Looking at $headlinesurl:
+So let’s move on to mainfile.php.  Looking at $headlinesurl:
 
 	$result = mysql_query("select sitename, url, headlinesurl from
 		headlines where status=1");
 	while (list($sitename, $url, $headlinesurl) =
 		mysql_fetch_row($result)) {
 
-It�s a static query into the headlines table.  Unless we can insert values
+It’s a static query into the headlines table.  Unless we can insert values
 into the headlines database, it's not much good to us. $cache_file is
 defined as:
 
@@ -756,7 +755,7 @@ defined as:
 using the $sitename from the same query as $headlinesurl.
 
 Moving on to include_once() and readfile(), returns zero hits.  But
-include() is used a lot...in fact, it�s used 355 times.  But that's
+include() is used a lot...in fact, it’s used 355 times.  But that's
 because it's used to include other files, particularly the header and
 footer of the theme, etc.  Considering we're only interested in
 include()'s that contain variables, we can filter out the cruft and keep
@@ -872,7 +871,7 @@ trick.  So this attack won't work, unless someone knows some way to fool
 PHP like you can fool the other scripting languages.  But I thought it had
 some educational value and was worth mentioning.
 
-There is one last thing I�d like to point out.  The admin.php script
+There is one last thing I’d like to point out.  The admin.php script
 include()'s a bunch of supporting scripts found in the /admin/ directory.  
 Each of these scripts includes a 'safety check' that looks like:
 
@@ -932,3 +931,5 @@ the judge.
             Special thanks to Zope Kitten for fixin' muh spelin'
 
 -----/ RFP2101 /-----------/ rfp.labs / wiretrip / rfp@wiretrip.net /---- 
+
+
