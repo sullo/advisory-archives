@@ -1,6 +1,7 @@
 # LDAP INJECTION IN OPENAM
 * Original URL: https://blog.cybercastle.io/ldap-injection-in-openam/
 * Archive.org URL: https://web.archive.org/web/20210226031627/https://blog.cybercastle.io/ldap-injection-in-openam/
+* CVE: [CVE-2021-29156](https://nvd.nist.gov/vuln/detail/CVE-2021-29156)
 
 **TL;DR**
 
