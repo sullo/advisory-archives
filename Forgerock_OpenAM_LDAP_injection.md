@@ -1,4 +1,6 @@
 # LDAP INJECTION IN OPENAM
+* Original URL: https://blog.cybercastle.io/ldap-injection-in-openam/
+* Archive.org URL: https://web.archive.org/web/20210226031627/https://blog.cybercastle.io/ldap-injection-in-openam/
 
 **TL;DR**
 
