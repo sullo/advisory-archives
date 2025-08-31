@@ -9,7 +9,7 @@ It is possible to remotely crash Trillian by sending an empty IM with the AOL AI
 
 The error message upon crash is:
 
-
+<img width="342" height="173" alt="trillian" src="https://github.com/user-attachments/assets/40c6e269-5761-4fbd-8ae8-d16a92c343c5" />
 
 ## Systems Affected:
 - Trillian Basic 3.1 Build 121
